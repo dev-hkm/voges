@@ -1,0 +1,32 @@
+{
+  "name": "voges",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npm run build && wrangler pages dev dist --local --ip 127.0.0.1 --port 5173",
+    "dev:ui": "vite",
+    "build": "vite build",
+    "preview": "npm run build && wrangler pages dev dist --local --ip 127.0.0.1 --port 4173",
+    "d1:seed:local": "wrangler d1 execute voges-banking --local --file=sample_data/schema.sql && wrangler d1 execute voges-banking --local --file=sample_data/seed.sql",
+    "d1:seed:remote": "wrangler d1 execute voges-banking --remote --file=sample_data/schema.sql && wrangler d1 execute voges-banking --remote --file=sample_data/seed.sql",
+    "d1:v3:local": "wrangler d1 execute voges-banking --local --file=migrations/0002_v3_security.sql",
+    "d1:v3:remote": "wrangler d1 execute voges-banking --remote --file=migrations/0002_v3_security.sql",
+    "test": "node --test tests/*.test.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.2",
+    "@vitejs/plugin-react": "latest",
+    "lucide-react": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "vite": "latest",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "wrangler": "latest"
+  }
+}

@@ -1,0 +1,26 @@
+name = "voges"
+compatibility_date = "2026-06-24"
+pages_build_output_dir = "dist"
+
+[vars]
+VOGES_MODEL = "gpt-realtime-2.1"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "voges-banking"
+database_id = "bd6916b9-9691-4ceb-b908-3808a61d7818"
+remote = true
+
+# Optional V3 bindings. They are intentionally not used in V2.
+#
+# [[r2_buckets]]
+# binding = "MEDIA_BUCKET"
+# bucket_name = "voges-media"
+#
+# [[kv_namespaces]]
+# binding = "SESSIONS"
+# id = "replace-with-kv-namespace-id"
+#
+# [[queues.producers]]
+# binding = "EVENTS"
+# queue = "voges-events"

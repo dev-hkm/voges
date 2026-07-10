@@ -1,0 +1,2 @@
+import { demoCustomerId, json } from '../../../_lib/core.js';
+export async function onRequestDelete({env,params}) { try { const customerId=await demoCustomerId(env.DB); const result=await env.DB.prepare('DELETE FROM webauthn_credentials WHERE id=? AND customer_id=?').bind(params.id,customerId).run(); if(!result.meta?.changes) return json({error:'Passkey not found.'},404); return json({deleted:true}); } catch(error) { return json({error:error.message},400); } }

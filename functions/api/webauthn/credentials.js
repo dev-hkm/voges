@@ -1,0 +1,2 @@
+import { demoCustomerId, json } from '../../_lib/core.js';
+export async function onRequestGet({env}) { try { const customerId=await demoCustomerId(env.DB); const data=(await env.DB.prepare('SELECT id,credential_id,transports,device_type,backed_up,created_at,last_used_at FROM webauthn_credentials WHERE customer_id=? ORDER BY created_at DESC').bind(customerId).all()).results; return json({data}); } catch(error) { return json({error:error.message},400); } }
