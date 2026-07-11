@@ -996,8 +996,9 @@ input:focus-visible {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 700;
-  animation: item-in 0.2s ease-out;
+  animation: orb-status-in 0.36s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 10;
+  text-shadow: 0 10px 28px color-mix(in srgb, currentColor 36%, transparent);
 }
 
 .orb-status-text.success {
@@ -1009,6 +1010,12 @@ input:focus-visible {
 }
 
 .voice-orb {
+  --orb-a: #222222;
+  --orb-b: #050505;
+  --orb-c: #747474;
+  --orb-glow: rgba(0, 0, 0, 0.18);
+  --orb-ring: var(--ink);
+  --orb-ring-opacity: 0.18;
   width: 240px;
   height: 240px;
   position: relative;
@@ -1020,11 +1027,13 @@ input:focus-visible {
   outline: none;
   cursor: pointer;
   border-radius: 50%;
-  transition: transform 0.2s ease;
+  filter: saturate(1);
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), filter 0.32s ease;
 }
 
 .voice-orb:hover:not(:disabled) {
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.01);
+  filter: saturate(1.08);
 }
 
 .voice-orb:active:not(:disabled) {
@@ -1035,34 +1044,106 @@ input:focus-visible {
   width: 126px;
   height: 126px;
   border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-  background: radial-gradient(circle at top left, #555, #000);
+  background:
+    radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.74), transparent 0 17%, transparent 28%),
+    radial-gradient(circle at 28% 24%, var(--orb-c), transparent 34%),
+    radial-gradient(circle at 68% 82%, color-mix(in srgb, var(--orb-a) 78%, #ffffff), transparent 48%),
+    linear-gradient(145deg, var(--orb-a), var(--orb-b));
   color: white;
   display: grid;
   place-items: center;
   position: relative;
   z-index: 2;
-  box-shadow: inset 10px 10px 20px rgba(255,255,255,0.12), 0 20px 40px rgba(0,0,0,0.15);
+  overflow: hidden;
+  box-shadow:
+    inset 16px 18px 28px rgba(255,255,255,0.13),
+    inset -24px -26px 44px rgba(0,0,0,0.28),
+    0 18px 50px var(--orb-glow),
+    0 0 0 1px color-mix(in srgb, var(--orb-a) 32%, transparent);
   transform: scale(calc(0.96 + var(--orb-energy) * 0.22)) translate(calc(var(--mouse-x, 0) * 12px), calc(var(--mouse-y, 0) * 12px)) perspective(500px) rotateX(calc(var(--mouse-y, 0) * -15deg)) rotateY(calc(var(--mouse-x, 0) * 15deg));
-  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.3s ease, background 0.3s ease;
+  transition:
+    transform 0.48s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.72s ease,
+    background 0.72s ease,
+    color 0.42s ease,
+    filter 0.72s ease;
   animation: water-drop 8s ease-in-out infinite;
 }
 
+.voice-orb-core::before,
+.voice-orb-core::after {
+  content: '';
+  position: absolute;
+  inset: -28%;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0.62;
+  transition: opacity 0.5s ease, transform 0.7s ease;
+}
+
+.voice-orb-core::before {
+  background: conic-gradient(from 140deg, transparent 0 20%, rgba(255,255,255,0.34), transparent 46%, rgba(255,255,255,0.12), transparent 72%);
+  mix-blend-mode: screen;
+  animation: orb-sheen 7s linear infinite;
+}
+
+.voice-orb-core::after {
+  inset: 10%;
+  background: radial-gradient(circle at 36% 30%, rgba(255,255,255,0.44), transparent 0 16%, transparent 32%);
+  opacity: 0.42;
+}
+
+.voice-orb-core svg {
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.22));
+  transition: transform 0.36s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s ease;
+}
+
+.voice-orb:hover:not(:disabled) .voice-orb-core svg {
+  transform: scale(1.08);
+}
+
 :root[data-theme='dark'] .voice-orb-core {
-  background: radial-gradient(circle at top left, #ffffff, #aaaaaa);
+  background:
+    radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.88), transparent 0 16%, transparent 28%),
+    radial-gradient(circle at 28% 24%, #ffffff, transparent 35%),
+    radial-gradient(circle at 68% 82%, #d2d2d2, transparent 48%),
+    linear-gradient(145deg, #ffffff, #9d9d9d);
   color: #000000;
-  box-shadow: inset 10px 10px 20px rgba(255,255,255,0.8), 0 20px 40px rgba(0,0,0,0.3);
+  box-shadow:
+    inset 16px 18px 28px rgba(255,255,255,0.8),
+    inset -24px -26px 44px rgba(0,0,0,0.14),
+    0 20px 58px rgba(0,0,0,0.32),
+    0 0 0 1px rgba(255,255,255,0.16);
 }
 
 .voice-orb.is-connected .voice-orb-core {
-  background: radial-gradient(circle at top left, var(--success), color-mix(in srgb, var(--success) 60%, black));
+  --orb-a: color-mix(in srgb, var(--success) 86%, #ffffff);
+  --orb-b: color-mix(in srgb, var(--success) 62%, #000000);
+  --orb-c: color-mix(in srgb, var(--success) 76%, #c8ffd9);
   color: #fff;
-  box-shadow: inset 10px 10px 20px rgba(255,255,255,0.2), 0 20px 40px rgba(0,0,0,0.15);
+  box-shadow:
+    inset 16px 18px 28px rgba(255,255,255,0.22),
+    inset -24px -26px 44px rgba(0,0,0,0.23),
+    0 22px 62px color-mix(in srgb, var(--success) 32%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--success) 42%, transparent),
+    0 0 48px color-mix(in srgb, var(--success) 28%, transparent);
+  animation: water-drop 7s ease-in-out infinite, orb-connected-glow 2.8s ease-in-out infinite;
 }
 
 .voice-orb.is-error .voice-orb-core {
-  background: radial-gradient(circle at top left, var(--danger), color-mix(in srgb, var(--danger) 60%, black));
+  --orb-a: color-mix(in srgb, var(--danger) 88%, #ffffff);
+  --orb-b: color-mix(in srgb, var(--danger) 62%, #000000);
+  --orb-c: color-mix(in srgb, var(--danger) 80%, #ffd0d0);
   color: #fff;
-  box-shadow: inset 10px 10px 20px rgba(255,255,255,0.2), 0 20px 40px rgba(0,0,0,0.15);
+  box-shadow:
+    inset 16px 18px 28px rgba(255,255,255,0.2),
+    inset -24px -26px 44px rgba(0,0,0,0.25),
+    0 22px 62px color-mix(in srgb, var(--danger) 34%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--danger) 46%, transparent),
+    0 0 52px color-mix(in srgb, var(--danger) 28%, transparent);
+  animation: water-drop 5s ease-in-out infinite, orb-error-pop 0.58s cubic-bezier(0.2, 0.9, 0.18, 1);
 }
 
 .voice-orb.mode-idle .voice-orb-core,
@@ -1075,13 +1156,17 @@ input:focus-visible {
 }
 
 .voice-orb.is-muted .voice-orb-core {
-  background: radial-gradient(circle at top left, #888, #444);
+  --orb-a: #888888;
+  --orb-b: #444444;
+  --orb-c: #b0b0b0;
   color: #fff;
   box-shadow: 0 16px 42px rgba(0, 0, 0, 0.1);
 }
 
 :root[data-theme='dark'] .voice-orb.is-muted .voice-orb-core {
-  background: radial-gradient(circle at top left, #666, #333);
+  --orb-a: #666666;
+  --orb-b: #333333;
+  --orb-c: #969696;
   color: #fff;
 }
 
@@ -1089,11 +1174,31 @@ input:focus-visible {
   position: absolute;
   inset: 50%;
   border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
-  border: 1px solid var(--ink);
+  border: 1px solid var(--orb-ring);
   transform: translate(-50%, -50%) scale(1);
-  opacity: 0.15;
+  opacity: var(--orb-ring-opacity);
   pointer-events: none;
   animation: water-drop 10s ease-in-out infinite reverse;
+  transition: border-color 0.62s ease, opacity 0.5s ease, filter 0.62s ease;
+}
+
+.voice-orb.is-connected {
+  --orb-ring: var(--success);
+  --orb-ring-opacity: 0.24;
+}
+
+.voice-orb.is-error {
+  --orb-ring: var(--danger);
+  --orb-ring-opacity: 0.28;
+  animation: orb-error-wobble 0.62s cubic-bezier(0.2, 0.9, 0.18, 1);
+}
+
+.voice-orb.is-connected .voice-orb-ring {
+  filter: drop-shadow(0 0 18px color-mix(in srgb, var(--success) 46%, transparent));
+}
+
+.voice-orb.is-error .voice-orb-ring {
+  filter: drop-shadow(0 0 18px color-mix(in srgb, var(--danger) 48%, transparent));
 }
 
 .voice-orb .ring-one {
@@ -2387,6 +2492,56 @@ body.modal-open {
   50% {
     transform: scale(1.08);
   }
+}
+
+@keyframes orb-status-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes orb-sheen {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orb-connected-glow {
+  0%,
+  100% {
+    filter: saturate(1) brightness(1);
+  }
+  50% {
+    filter: saturate(1.18) brightness(1.08);
+  }
+}
+
+@keyframes orb-error-pop {
+  0% {
+    filter: saturate(1.1) brightness(1.14);
+  }
+  45% {
+    filter: saturate(1.45) brightness(1.22);
+  }
+  100% {
+    filter: saturate(1) brightness(1);
+  }
+}
+
+@keyframes orb-error-wobble {
+  0% { transform: translateX(0) scale(1); }
+  18% { transform: translateX(-5px) scale(1.015); }
+  36% { transform: translateX(5px) scale(0.995); }
+  54% { transform: translateX(-3px) scale(1.008); }
+  72% { transform: translateX(2px) scale(1); }
+  100% { transform: translateX(0) scale(1); }
 }
 
 @keyframes wave-rise {
