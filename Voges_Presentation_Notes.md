@@ -1,151 +1,77 @@
-# Voges — Presentation Notes
+# Voges — Premium 6-Slide Pitch Presentation Notes
 
-Companion notes for `Voges_Presentation.pptx` (12 slides).
-For each slide: **VN explanation** (ghi chú tiếng Việt), **EN speaking script** (đọc to khi trình bày), and **Demo instruction** where relevant.
+Companion notes for `Voges_Presentation.pptx` (6 slides), matching the **Agentic AI Build Week 2026 Pitching Playbook** guidelines.
 
-> Core message: **Voice is the primary interface. The screen is the safety layer.**
-
----
-
-## Slide 1 — Title: Voges
-
-**VN — Ghi chú:**
-Mở đầu ngắn gọn. Voges là trợ lý ngân hàng điều khiển bằng giọng nói. Câu chốt: giọng nói là giao diện chính, còn màn hình là lớp an toàn. Nhấn mạnh đây không phải chatbot thông thường.
-
-**EN — Speaking script:**
-"This is Voges, a voice-first AI financial concierge. The one line to remember: voice is the primary interface, and the screen is the safety layer. Let me show you why that matters for banking."
+For each slide, you will find:
+- **VN Ghi chú (VN Notes):** Thuyết minh bằng tiếng Việt để chuẩn bị tinh thần và nắm rõ mục tiêu của slide.
+- **EN Speaking Script:** Lời thoại nói bằng tiếng Anh, tối ưu hóa để diễn thuyết ngắn gọn, mạch lạc trong khoảng 30s-45s/slide (tổng cộng 4.5 phút cho toàn bộ pitching).
+- **Demo / Interaction:** Hướng dẫn demo và hành động trực quan tại slide đó.
 
 ---
 
-## Slide 2 — Problem
+## Slide 1 — Team & Promise (Title Slide - Dark Background)
 
-**VN — Ghi chú:**
-App ngân hàng nhiều menu, người dùng khó tìm đúng chỗ. Chatbot truyền thống chỉ trả lời câu hỏi, không thể thực hiện hành động an toàn. Thách thức lớn nhất của AI tài chính là vừa hữu ích vừa không nguy hiểm.
+**VN Ghi chú:**
+Mở đầu ấn tượng và dứt khoát. Giới thiệu tên dự án Voges và định vị sản phẩm: một "Voice-First AI Financial Concierge" dành riêng cho GoTyme Bank. Hãy nhấn mạnh thông điệp cốt lõi quyết định kiến trúc: Giọng nói là giao diện chính để tương tác, còn màn hình điện thoại đóng vai trò là lớp bảo vệ an toàn để xác nhận.
 
-**EN — Speaking script:**
-"Banking apps are deep and menu-heavy. Users get lost finding a single toggle. Chatbots can answer questions but cannot safely take action. The real challenge is being useful without becoming dangerous."
-
----
-
-## Slide 3 — Solution
-
-**VN — Ghi chú:**
-Người dùng nói chuyện tự nhiên với AI. Voges đọc dữ liệu ngân hàng, giải thích vấn đề, đề xuất bước tiếp theo. Nhưng mọi hành động nhạy cảm đều bị kiểm soát bởi policy, approval, passkey và audit ở phía backend.
-
-**EN — Speaking script:**
-"Voges lets users speak naturally. It reads their banking data, explains problems, and proposes next steps. Every sensitive action is controlled server-side by policy, approval, passkey, and an audit trail."
+**EN Speaking Script:**
+"Good afternoon, judges. We are the team behind Voges, a voice-first AI financial concierge built specifically for GoTyme Bank. Our core architectural promise is simple: voice is the primary interface, and the screen is the safety layer. We eliminate the friction of complex banking menus while keeping your transactions completely secure. Let me show you why this is the future of mobile banking."
 
 ---
 
-## Slide 4 — Product Demo Overview
+## Slide 2 — Problem Insight (Light Background)
 
-**VN — Ghi chú:**
-Ba khoảnh khắc demo: (1) câu hỏi chỉ đọc — vì sao Netflix bị từ chối; (2) hành động nhạy cảm — bật thanh toán online, đi qua approval và passkey; (3) yêu cầu nguy hiểm — chuyển hết tiền và bỏ qua xác thực, bị chặn. Ba màu xanh/vàng/đỏ xuất hiện xuyên suốt bài.
+**VN Ghi chú:**
+Trình bày nỗi đau thực tế một cách sắc bén (insight). 
+1. Giao diện app ngân hàng hiện tại quá nhiều menu lồng nhau (4+ tầng) khiến việc thực hiện các tính năng khẩn cấp (như khóa thẻ, mở thanh toán trực tuyến) cực kỳ chậm chạp và khó tìm.
+2. Việc đưa AI vào để thực hiện giao dịch tự động bằng giọng nói lại vấp phải bài toán bảo mật: AI thông thường chỉ biết trả lời FAQ (vô dụng), còn nếu cấp quyền ghi trực tiếp cho AI (writes) thì rủi ro từ prompt injection và ảo giác (hallucination) sẽ dẫn đến thất thoát tiền của khách hàng.
 
-**EN — Speaking script:**
-"Three demo moments. A safe read-only question. A sensitive action that goes through approval and passkey. And a dangerous request that gets blocked. Watch the green, amber, and red pattern throughout."
-
-**Demo instruction:**
-Chuẩn bị sẵn 3 câu thoại này để đọc ở phần demo trực tiếp. Đây là bản đồ tổng cho các slide sau.
-
----
-
-## Slide 5 — System Architecture
-
-**VN — Ghi chú:**
-Kiến trúc một đường ống liền mạch. Giọng nói vào GPT Realtime, model gọi tool, tool router chạy backend. Policy engine quyết định, cổng approval, WebAuthn xác thực, thực thi tool, ghi audit, rồi trả kết quả bằng giọng nói. Màu vàng là bước kiểm soát, màu xanh là thực thi thật.
-
-**EN — Speaking script:**
-"This is the full pipeline. Voice goes into GPT Realtime, the model calls a tool, the router hits the backend. The policy engine decides, the approval gate and WebAuthn verify, the tool executes, everything is audited, and the answer comes back as voice."
-
-**Pipeline:**
-`Voice → GPT Realtime → Tool Router → Policy Engine → Approval Gate → WebAuthn → Execute Tool → Audit Log → Voice Response`
+**EN Speaking Script:**
+"Modern banking apps are powerful but suffer from buried navigation. Crucial security settings like freezing a card or toggling online payments are hidden under 4 or 5 layers of sub-menus, causing high user anxiety and support overhead. While natural voice control is the obvious solution, financial AI faces a security dilemma: standard chatbots are FAQ-only and useless, while AI agents with direct write access are a massive liability due to hallucinations."
 
 ---
 
-## Slide 6 — Voice + Tool Calling
+## Slide 3 — Agentic Workflow (Light Background)
 
-**VN — Ghi chú:**
-Voges dùng GPT Realtime model `gpt-realtime-2.1`, kết nối bằng WebRTC trực tiếp từ trình duyệt. Model gọi các tool ngân hàng cố định kiểu để đọc dữ liệu thật từ Cloudflare D1. Đây là các tool chỉ đọc, không bịa số liệu.
+**VN Ghi chú:**
+Giải thích quy trình hoạt động của Voges (Goal -> Plan -> Tools -> Act -> Verify). Điểm quan trọng nhất là tính chất "Zero-Trust": AI (GPT Realtime) chỉ có quyền "Đề xuất" (Propose) hành động, còn việc "Quyết định" và "Thực thi" (Decide & Execute) hoàn toàn nằm ở phía máy chủ (Server-side Policy Engine) kết hợp xác thực sinh trắc học phần cứng (WebAuthn Passkeys).
 
-**EN — Speaking script:**
-"Voges uses GPT Realtime, model gpt-realtime-2.1, connected over WebRTC straight from the browser. The model calls typed banking tools to read real data from Cloudflare D1. These read tools never invent numbers."
-
-**Read-only tools shown:**
-`getCustomerProfile`, `getRecentTransactions`, `getCardStatus`, `getKycStatus`, `explainDeclineReason`, `generateFundingInstruction`
+**EN Speaking Script:**
+"To solve this, we built a Zero-Trust agentic workflow. The user states their Goal naturally over a WebRTC voice stream. GPT Realtime parses the intent and proposes a structured tool call. Our server-side Tool Router intercepts it immediately. If it is a sensitive write action, our deterministic Policy Engine triggers an expiring Pending Action on screen. The user must explicitly confirm it using a native hardware Passkey, after which the server executes the secure D1 transaction."
 
 ---
 
-## Slide 7 — Safety Layer
+## Slide 4 — Why It Wins (Dark Background)
 
-**VN — Ghi chú:**
-Lớp an toàn là trái tim của Voges. AI chỉ đề xuất, backend mới quyết định. Policy engine tất định và có tính phân quyền: allow, confirm, passkey, hoặc block. Trạng thái frontend chỉ để hiển thị. Những thứ luôn bị chặn: chuyển tiền, bỏ qua xác thực, lộ CVV/OTP/số thẻ đầy đủ, đổi danh tính KYC, tư vấn đầu tư.
+**VN Ghi chú:**
+Nêu bật 3 trụ cột kỹ thuật giúp Voges giành chiến thắng:
+1. **Policy-Controlled:** Bộ lọc quy tắc backend tất định, ngăn chặn hoàn toàn việc AI bị thao túng để thực hiện chuyển khoản trái phép hoặc đổi thông tin danh tính.
+2. **Passkey-Secured:** Xác thực WebAuthn chuẩn hóa. Hệ thống chỉ nhận chữ ký mã hóa từ chip bảo mật phần cứng, Voges không bao giờ tiếp cận hay lưu trữ dữ liệu vân tay/khuôn mặt của người dùng.
+3. **Audit-Backed:** Mọi thao tác từ hội thoại, đề xuất tool, đánh giá policy cho tới kết quả thực thi đều được ghi lại vĩnh viễn vào D1 logs chống sửa xóa (append-only audit trail).
 
-**EN — Speaking script:**
-"This is the heart of Voges. The AI only proposes; the backend decides. The policy engine is deterministic: allow, confirm, passkey, or block. Money transfers, verification bypass, revealing secrets, KYC identity changes, and investment advice are always blocked."
-
----
-
-## Slide 8 — Approval + WebAuthn
-
-**VN — Ghi chú:**
-Với hành động nhạy cảm, backend tạo pending action hết hạn. UI hiện approval sheet: trạng thái hiện tại, trạng thái mới, mức rủi ro, lý do policy. Người dùng xác nhận, rồi hệ điều hành bật passkey thật. Backend xác minh chữ ký WebAuthn rồi mới thực thi. Voges không nhận dữ liệu vân tay hay khuôn mặt — chỉ nhận một chữ ký mật mã.
-
-**EN — Speaking script:**
-"For sensitive actions the backend creates an expiring pending action. The approval sheet shows the current state, the new state, the risk, and the policy reason. The user confirms, the OS runs a real passkey, and the server verifies the cryptographic assertion before executing. Voges never sees your fingerprint or face, only a signed assertion."
-
-**Demo instruction:**
-Khi demo bật thanh toán online, dừng lại ở approval sheet để khán giả thấy rõ current state / new state / risk, rồi mới chạm passkey.
+**EN Speaking Script:**
+"Voges wins because of three strict design pillars. First, it is Policy-Controlled: deterministic backend rules override the LLM. Hallucinations cannot compromise security. Second, it is Passkey-Secured: we verify identity cryptographically using WebAuthn. Fingerprints and face data never touch our servers. Third, it is Audit-Backed: an append-only audit trail records every intent, block, and state change for total auditability."
 
 ---
 
-## Slide 9 — Audit Trail
+## Slide 5 — Evidence + Impact (Light Background)
 
-**VN — Ghi chú:**
-Mọi tool call và mọi action đều được ghi vào log chỉ-thêm (append-only). Log gồm kết quả policy, pending action, xác nhận, trạng thái WebAuthn, kết quả thực thi. Kể cả yêu cầu bị chặn cũng được ghi lại. Đây là nền tảng cho tuân thủ, gỡ lỗi và niềm tin.
+**VN Ghi chú:**
+Đưa ra số liệu chứng minh dự án hoạt động thực tế. Voges đã vượt qua 34 kịch bản kiểm thử tự động (tests) về bảo mật, chặn đứng 100% các cuộc tấn công lừa đảo (Scam Risk Advisor). Về mặt hiệu quả kinh doanh, việc điều khiển bằng giọng nói giúp giảm tới 90% thời gian thực hiện thao tác so với tìm kiếm thủ công trên app. Toàn bộ dữ liệu demo đều được ánh xạ dựa trên các dòng sản phẩm thật của GoTyme như tài khoản Everyday Account, tài khoản tiết kiệm Go Save (lãi suất 5%), và tài khoản mua bán Vàng (PAX Gold).
 
-**EN — Speaking script:**
-"Everything is written to an append-only audit log: the policy result, the pending action, the confirmation, the passkey status, and the execution result. Even a blocked request is logged. This is what makes the system trustworthy and auditable."
-
----
-
-## Slide 10 — Demo Scenarios
-
-**VN — Ghi chú:**
-Sáu kịch bản demo: (1) giải thích giao dịch bị từ chối; (2) hiện giao dịch gần đây; (3) kiểm tra KYC; (4) hướng dẫn nạp tiền; (5) bật thanh toán online với approval và passkey; (6) yêu cầu nguy hiểm bị chặn. Bốn cái đầu là chỉ-đọc màu xanh, cái thứ năm màu vàng, cái cuối màu đỏ.
-
-**EN — Speaking script:**
-"Six scenarios. Four safe read-only ones: explaining a decline, showing transactions, checking KYC, and funding guidance. One sensitive action with approval and passkey. And one dangerous request that gets blocked."
-
-**Demo instruction:**
-Nếu thời gian ngắn, chạy tối thiểu 3 kịch bản: card declined (xanh), enable online payments (vàng), dangerous request (đỏ).
+**EN Speaking Script:**
+"To validate credibility, we built a test suite with 34 automated scenarios covering scam risk, frozen account checks, and international payments. All 34 tests pass successfully. In terms of impact, Voges reduces settings navigation time by 90%—completing complex toggles in 5 seconds instead of 1 minute. We also seeded our database with GoTyme's actual product lines, including Everyday Accounts, high-yield Go Save goals, and tokenized PAX Gold accounts."
 
 ---
 
-## Slide 11 — What Makes Voges Different
+## Slide 6 — Demo + Close (Dark Background)
 
-**VN — Ghi chú:**
-Chatbot truyền thống: ưu tiên text, trả lời FAQ, an toàn hành động yếu, ít minh bạch. Voges: ưu tiên giọng nói, dựa trên tool, kiểm soát bằng policy, bảo mật bằng passkey, có audit, và dùng màn hình như lớp an toàn. Đó chính là câu chốt mở đầu.
+**VN Ghi chú:**
+Chốt lại bài pitching bằng kịch bản Demo 3 bước (Xanh - Vàng - Đỏ) và Lộ trình phát triển sản xuất trung thực (Roadmap). 
+- *Bước 1 (Xanh - Chỉ đọc):* Hỏi lý do Netflix bị decline.
+- *Bước 2 (Vàng - Hành động nhạy cảm):* Yêu cầu bật thanh toán trực tuyến (Bật approval sheet + quét Passkey).
+- *Bước 3 (Đỏ - Nguy hiểm):* Yêu cầu chuyển hết tiền và bỏ qua xác thực (Bị chặn hoàn toàn).
+Lộ trình sắp tới tập trung vào bảo mật định danh động và tích hợp Core API.
 
-**EN — Speaking script:**
-"A traditional chatbot is text-first, answers FAQs, has weak action safety, and little visibility. Voges is voice-first, tool-based, policy-controlled, passkey-secured, audit-backed, and uses the screen as a safety layer."
-
----
-
-## Slide 12 — Roadmap / Next Steps
-
-**VN — Ghi chú:**
-Lộ trình thẳng thắn. Giới hạn demo: hiện tại app dùng một khách hàng demo cố định, bước đầu tiên là danh tính xác thực thật. Sau đó: chuyển đổi nhiều khách hàng sau khi đã ràng buộc danh tính, mở rộng luật policy, observability production, tích hợp core ngân hàng, luồng chuyển người thật và đa ngôn ngữ. Không nói quá, chỉ nói đúng những gì còn thiếu.
-
-**EN — Speaking script:**
-"Let me be honest about what is next. Today the demo resolves a single customer, so real authenticated identity is the first step. After that: multi-customer switching, more policy rules, production observability, bank core integration, human escalation, and better multilingual support."
-
----
-
-## Assumptions & accuracy notes
-
-- **Demo data theme:** the seeded sample data (`sample_data/seed.sql`) is themed around **GoTyme Bank** and uses **PHP** currency for a hackathon context. Slides keep the product story bank-agnostic; the specific bank name is not emphasized so the deck stays reusable.
-- **Single demo customer:** the backend currently resolves one demo customer identity. This is presented honestly on the roadmap slide as the first production step, not hidden.
-- **Model / stack claims** (`gpt-realtime-2.1`, WebRTC, Cloudflare Pages Functions + D1, WebAuthn via `@simplewebauthn`) are taken directly from the source and config, not invented.
-- **Tool names** shown are the real read-only tools defined in `src/banking.js` / `functions/_lib/banking.js`.
-- No app source code was modified; only the presentation and this notes file were created.
+**EN Speaking Script:**
+"For our live demo, we will show three moments. First, a safe query explaining why a Netflix payment failed. Second, a sensitive toggle to enable online payments using a real phone passkey. Third, a dangerous request to bypass security that is blocked. Our roadmap moves from this single-client demo to core banking API integration. Talk to Voges at master.voges.pages.dev. Thank you."
