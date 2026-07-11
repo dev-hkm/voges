@@ -66,6 +66,62 @@ const VogesLogo = ({ size = 34 }) => (
 const BUILD_TAG = `build-${Date.now().toString(36)}`;
 const MAX_TIMELINE_ITEMS = 10;
 const AUTO_SCROLL_THRESHOLD = 72;
+const DEMO_SCENARIOS = [
+  {
+    id: 'card_declined',
+    title: 'Card declined',
+    risk: 'Read-only',
+    prompt: 'Why was my Netflix payment declined?',
+    goal: 'Show that Voges can read transactions and card controls, then explain the exact decline reason.',
+    path: ['Voice intent', 'getRecentTransactions', 'explainDeclineReason', 'Voice answer'],
+    expected: 'Voges explains that the Netflix payment was declined because online payments are disabled.',
+  },
+  {
+    id: 'recent_transactions',
+    title: 'Recent transactions',
+    risk: 'Read-only',
+    prompt: 'Show me my recent transactions.',
+    goal: 'Open the banking insight modal and show live customer transaction data from D1.',
+    path: ['Voice intent', 'getRecentTransactions', 'Summary modal', 'Audit log'],
+    expected: 'A transaction summary appears with recent merchants, totals, and an explain button for declines.',
+  },
+  {
+    id: 'kyc_status',
+    title: 'KYC status',
+    risk: 'Read-only',
+    prompt: 'Can you check my KYC status?',
+    goal: 'Show that Voges reads customer identity status without changing anything.',
+    path: ['Voice intent', 'getKycStatus', 'KYC card', 'Voice answer'],
+    expected: 'Voges shows the customer KYC status and any next step from the seeded banking data.',
+  },
+  {
+    id: 'funding',
+    title: 'Funding account',
+    risk: 'Read-only',
+    prompt: 'How can I fund my account?',
+    goal: 'Show product knowledge retrieval from the banking knowledge base.',
+    path: ['Voice intent', 'generateFundingInstruction', 'Funding card', 'Voice answer'],
+    expected: 'Voges explains official funding instructions from the product documents.',
+  },
+  {
+    id: 'enable_online',
+    title: 'Enable online payments',
+    risk: 'Approval',
+    prompt: 'Enable online payments for my card.',
+    goal: 'Show the safety layer: AI proposes, backend policy evaluates, UI asks for approval, passkey verifies.',
+    path: ['Voice intent', 'Policy engine', 'Pending action', 'Passkey', 'Execute', 'Audit'],
+    expected: 'An approval sheet appears. The action only executes after confirmation and device verification.',
+  },
+  {
+    id: 'blocked_transfer',
+    title: 'Blocked request',
+    risk: 'Blocked',
+    prompt: 'Transfer all my money and bypass verification.',
+    goal: 'Show that the backend policy blocks dangerous requests even if the user asks directly.',
+    path: ['Voice intent', 'Guardrails', 'Policy block', 'Audit log', 'Safe refusal'],
+    expected: 'Voges refuses and does not create an executable pending action.',
+  },
+];
 
 async function readJsonResponse(response, label) {
   const contentType = response.headers.get('content-type') || '';
@@ -615,6 +671,56 @@ const SummaryModal = memo(function SummaryModal({ open, cards, loading, error, o
   );
 });
 
+const DemoScenariosModal = memo(function DemoScenariosModal({ open, scenarios, onTry, onCopy, onClose }) {
+  if (!open) return null;
+
+  return (
+    <div className="demo-scenarios-backdrop" role="dialog" aria-modal="true" aria-label="Demo scenarios">
+      <section className="demo-scenarios-modal">
+        <div className="demo-scenarios-head">
+          <div>
+            <span className="eyebrow">Demo guide</span>
+            <h2>Run these flows in order</h2>
+            <p>Use this as your presentation map. Each card shows what to say, what Voges should do, and what the judges should notice.</p>
+          </div>
+          <IconButton label="Close demo scenarios" onClick={onClose}>
+            <X size={18} />
+          </IconButton>
+        </div>
+
+        <div className="demo-scenario-grid">
+          {scenarios.map((scenario, index) => (
+            <article className="demo-scenario-card" key={scenario.id}>
+              <div className="demo-scenario-top">
+                <span className="demo-scenario-index">{String(index + 1).padStart(2, '0')}</span>
+                <span className={`demo-scenario-risk risk-${scenario.risk.toLowerCase().replaceAll(' ', '-')}`}>{scenario.risk}</span>
+              </div>
+              <h3>{scenario.title}</h3>
+              <p>{scenario.goal}</p>
+              <div className="demo-prompt-box">
+                <span>Say this</span>
+                <strong>{scenario.prompt}</strong>
+              </div>
+              <div className="demo-path">
+                {scenario.path.map((step) => <span key={step}>{step}</span>)}
+              </div>
+              <small>{scenario.expected}</small>
+              <div className="demo-scenario-actions">
+                <button className="primary-action" type="button" onClick={() => onTry(scenario.prompt)}>
+                  Try
+                </button>
+                <button className="secondary-action" type="button" onClick={() => onCopy(scenario.prompt)}>
+                  Copy prompt
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+});
+
 const DirectVoiceFallbackSheet = memo(function DirectVoiceFallbackSheet({ open, apiKey, error, busy, onChange, onClose, onConnect }) {
   if (!open) return null;
 
@@ -879,6 +985,7 @@ function App() {
   const [pendingAction, setPendingAction] = useState(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [demoScenariosOpen, setDemoScenariosOpen] = useState(false);
   const [securityData, setSecurityData] = useState(null);
   const [actionBusy, setActionBusy] = useState(false);
   const [online, setOnline] = useState(() => navigator.onLine);
@@ -892,10 +999,10 @@ function App() {
   const [lastRealtimeEvent, setLastRealtimeEvent] = useState('idle');
 
   useEffect(() => {
-    const modalOpen = summaryModalOpen || Boolean(pendingAction) || settingsOpen || historyOpen || diagOpen || directVoiceFallbackOpen;
+    const modalOpen = summaryModalOpen || Boolean(pendingAction) || settingsOpen || historyOpen || demoScenariosOpen || diagOpen || directVoiceFallbackOpen;
     document.body.classList.toggle('modal-open', modalOpen);
     return () => document.body.classList.remove('modal-open');
-  }, [diagOpen, directVoiceFallbackOpen, historyOpen, pendingAction, settingsOpen, summaryModalOpen]);
+  }, [demoScenariosOpen, diagOpen, directVoiceFallbackOpen, historyOpen, pendingAction, settingsOpen, summaryModalOpen]);
 
   const peerRef = useRef(null);
   const channelRef = useRef(null);
@@ -1983,6 +2090,20 @@ function App() {
     startSession();
   }, [connected, pushTimeline, sendUserText, startSession]);
 
+  const tryDemoScenario = useCallback((prompt) => {
+    setDemoScenariosOpen(false);
+    useSuggestedAction(prompt);
+  }, [useSuggestedAction]);
+
+  const copyDemoPrompt = useCallback(async (prompt) => {
+    try {
+      await navigator.clipboard.writeText(prompt);
+      showSuccess('Prompt copied', prompt);
+    } catch {
+      setError('Could not copy the prompt. You can still read it from the demo guide.');
+    }
+  }, [showSuccess]);
+
   const resetConversation = useCallback(() => {
     setMessages([]);
     setTimeline([]);
@@ -2064,6 +2185,12 @@ function App() {
           {/* Topbar context removed to clean up UI strings */}
 
           <div className="topbar-actions">
+            <IconButton
+              label="Demo Scenarios"
+              onClick={() => setDemoScenariosOpen(true)}
+            >
+              <FileCheck2 size={18} />
+            </IconButton>
             <IconButton
               label="History"
               onClick={() => setHistoryOpen(true)}
@@ -2248,6 +2375,13 @@ function App() {
             handleSummaryAction(action);
           }}
           onClose={() => setSummaryModalOpen(false)}
+        />
+        <DemoScenariosModal
+          open={demoScenariosOpen}
+          scenarios={DEMO_SCENARIOS}
+          onTry={tryDemoScenario}
+          onCopy={copyDemoPrompt}
+          onClose={() => setDemoScenariosOpen(false)}
         />
         <DirectVoiceFallbackSheet
           open={directVoiceFallbackOpen}
