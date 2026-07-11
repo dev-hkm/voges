@@ -379,7 +379,11 @@ const VoiceOrb = memo(function VoiceOrb({ mode, energy, muted, onClick, disabled
         type="button"
       >
         <div className="voice-orb-core">
-          {isConnected ? <X size={32} /> : <Phone size={30} />}
+          <span className="voice-orb-signal" aria-hidden="true">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <span key={index} style={{ '--signal-index': index }} />
+            ))}
+          </span>
         </div>
         <div className="voice-orb-ring ring-one" />
         <div className="voice-orb-ring ring-two" />
