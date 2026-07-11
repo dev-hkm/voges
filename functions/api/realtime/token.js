@@ -25,7 +25,18 @@ export async function onRequestGet({ request, env }) {
       }
     }
     const session = buildTokenSessionConfig({ voice: REALTIME_DEFAULT_VOICE });
-    const response = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
+    // Pages Functions normally execute nearest to the visitor. That can make
+    // direct OpenAI egress unavailable in some edge regions. The AI binding
+    // gives this Function a Cloudflare-authenticated AI Gateway route; only
+    // the server-held OpenAI key is sent upstream, never the browser.
+    const gateway = env.AI && typeof env.AI.gateway === 'function'
+      ? env.AI.gateway('default')
+      : null;
+    const gatewayBaseUrl = gateway ? await gateway.getUrl('openai') : null;
+    const clientSecretUrl = gatewayBaseUrl
+      ? `${gatewayBaseUrl}/realtime/client_secrets`
+      : 'https://api.openai.com/v1/realtime/client_secrets';
+    const response = await fetch(clientSecretUrl, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${env.OPENAI_API_KEY}`,
@@ -48,7 +59,7 @@ export async function onRequestGet({ request, env }) {
       return Response.json({ error: data?.error?.message || 'OpenAI rejected the realtime session request.' }, { status: response.status });
     }
 
-    console.log(JSON.stringify({ event: 'realtime_token_created', session_id: voiceSession?.session_id || null, model: REALTIME_MODEL, upstream_status: response.status }));
+    console.log(JSON.stringify({ event: 'realtime_token_created', session_id: voiceSession?.session_id || null, model: REALTIME_MODEL, upstream_status: response.status, route: gatewayBaseUrl ? 'ai_gateway' : 'direct' }));
     return Response.json({ ...data, session_id: voiceSession?.session_id || null }, {
       status: 200,
       headers: { 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': origin },

@@ -6,8 +6,9 @@ This file is intentionally placed at repository root so an AI or developer sees 
 
 ```text
 REST /api/realtime/token
-  server uses OPENAI_API_KEY
-  server requests an ephemeral client secret
+  Pages Function uses the Cloudflare AI binding to reach AI Gateway
+  server uses OPENAI_API_KEY only on that server-side request
+  server requests an ephemeral client secret through the provider-native gateway route
   response returns client secret value
 
 WebRTC
@@ -20,6 +21,29 @@ WebRTC
 ```
 
 Do not combine these phases. The REST endpoint mints credentials; it is not the live audio transport. The WebRTC call carries audio and Realtime events.
+
+## Production Realtime routing: do not remove the AI binding
+
+The Pages Function's nearest edge can be a region where OpenAI rejects server-side requests with:
+
+```text
+Country, region, or territory not supported
+```
+
+`functions/api/realtime/token.js` therefore obtains the provider-native OpenAI URL from `env.AI.gateway('default').getUrl('openai')`. This makes the request travel through Cloudflare AI Gateway rather than directly from the request's nearest Pages edge. `wrangler.toml` must retain:
+
+```toml
+[ai]
+binding = "AI"
+```
+
+Cloudflare requirements for this deployment:
+
+1. Smart Placement is enabled for both Pages production and preview.
+2. The `default` AI Gateway is configured to allow the Pages Function route (currently gateway authentication is off; alternatively use a correctly scoped AI Gateway Run credential server-side).
+3. `OPENAI_API_KEY` remains an encrypted Pages secret. It must never be copied into React, a Vite variable, or a browser request.
+
+If voice fails before WebRTC begins, check `/api/realtime/token` first. A healthy response is HTTP 200 with a short-lived `value` and `session.model === "gpt-realtime-2.1"`. Do not change the browser transport to REST or WebSocket as a workaround.
 
 ## Realtime response rules
 

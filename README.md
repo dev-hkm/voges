@@ -44,6 +44,16 @@ The complete app, including Pages Functions, is ready at `http://localhost:5173`
 
 Set `OPENAI_API_KEY` as an encrypted secret in the Pages project under Settings > Variables and Secrets. Do not put it in `wrangler.toml` or frontend code.
 
+The production Pages Function uses the `AI` binding declared in `wrangler.toml` to mint Realtime client secrets through Cloudflare AI Gateway. Keep Smart Placement enabled in **Workers & Pages → Voges → Settings → Runtime** for both production and preview. The `default` AI Gateway must permit the server-side provider-native request; for this demo its gateway authentication is disabled. If authentication is re-enabled later, configure a scoped AI Gateway Run credential on the server before deploying.
+
+Verify the deployment before a demo:
+
+```bash
+curl https://voges.pages.dev/api/realtime/token
+```
+
+It must return HTTP 200 with a short-lived `value` and a session model of `gpt-realtime-2.1`.
+
 The app uses `gpt-realtime-2.1` and WebRTC. Optional D1, R2, KV, and Queues bindings are documented in `wrangler.toml` for persistence, media exports, session state, and background events.
 
 ## V2 banking layer

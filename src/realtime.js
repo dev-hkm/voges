@@ -4,6 +4,7 @@ export {
   REALTIME_VOICES,
   REALTIME_INSTRUCTIONS,
   coerceRealtimeVoice,
+  buildTokenSessionConfig,
   buildSessionUpdateConfig,
 } from '../shared/realtime-config.js';
 

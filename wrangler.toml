@@ -2,6 +2,12 @@ name = "voges"
 compatibility_date = "2026-06-24"
 pages_build_output_dir = "dist"
 
+# Cloudflare-native AI Gateway binding. Pages Functions use this binding to
+# reach the provider-native OpenAI gateway without exposing credentials to the
+# browser or relying on the request's nearest edge location.
+[ai]
+binding = "AI"
+
 [vars]
 VOGES_MODEL = "gpt-realtime-2.1"
 

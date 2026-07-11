@@ -9,6 +9,7 @@ import {
   CreditCard,
   FileCheck2,
   Fingerprint,
+  KeyRound,
   Landmark,
   LoaderCircle,
   LockKeyhole,
@@ -32,6 +33,7 @@ import { HistoryDrawer } from './components/HistoryDrawer.jsx';
 import {
   classifyRealtimeError,
   coerceRealtimeVoice,
+  buildTokenSessionConfig,
   buildSessionUpdateConfig,
   getResponseOutcome,
   isRealtimeConcurrencyError,
@@ -118,6 +120,10 @@ function formatSessionError(error) {
   if (error?.name === 'NotFoundError') return 'No microphone was found. Connect one, then try again.';
   if (error?.name === 'NotReadableError') return 'Your microphone is being used by another app. Close that app, then try again.';
   return normalizeErrorMessage(error?.message || 'Could not start Voges.');
+}
+
+function isUnsupportedRegionError(error) {
+  return /country, region, or territory not supported/i.test(String(error?.message || error || ''));
 }
 
 function safeVibrate(pattern) {
@@ -540,6 +546,46 @@ const SummaryModal = memo(function SummaryModal({ open, cards, loading, error, o
   );
 });
 
+const DirectVoiceFallbackSheet = memo(function DirectVoiceFallbackSheet({ open, apiKey, error, busy, onChange, onClose, onConnect }) {
+  if (!open) return null;
+
+  return (
+    <div className="direct-voice-backdrop" role="dialog" aria-modal="true" aria-label="Connect voice directly for this demo">
+      <section className="direct-voice-sheet">
+        <div className="sheet-handle" />
+        <div className="direct-voice-icon"><KeyRound size={20} /></div>
+        <span className="eyebrow">Demo connection</span>
+        <h2>Connect voice from this device</h2>
+        <p>
+          Cloudflare&apos;s current region cannot mint a Realtime session. Enter a temporary OpenAI API key to create a one-time browser session directly from this device.
+        </p>
+        <label className="direct-key-field">
+          <span>Temporary API key</span>
+          <input
+            type="password"
+            value={apiKey}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder="sk-..."
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck="false"
+          />
+        </label>
+        <small className="direct-key-note">
+          The key is used only in this browser to mint a short-lived session, is never stored, and is cleared immediately after use. Use a restricted demo key and rotate it after the presentation.
+        </small>
+        {error && <div className="direct-key-error" role="alert">{error}</div>}
+        <div className="sheet-actions">
+          <button className="secondary-action" onClick={onClose} disabled={busy} type="button">Cancel</button>
+          <button className="primary-action" onClick={onConnect} disabled={busy || !apiKey.trim()} type="button">
+            {busy ? 'Connecting…' : 'Connect voice'}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+});
+
 const SettingsDrawer = memo(function SettingsDrawer({
   open,
   data,
@@ -692,6 +738,9 @@ function App() {
   const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState('');
+  const [directVoiceFallbackOpen, setDirectVoiceFallbackOpen] = useState(false);
+  const [directVoiceApiKey, setDirectVoiceApiKey] = useState('');
+  const [directVoiceError, setDirectVoiceError] = useState('');
   const [customerContext, setCustomerContext] = useState(null);
   const [timeline, setTimeline] = useState([]);
   const [pendingAction, setPendingAction] = useState(null);
@@ -710,10 +759,10 @@ function App() {
   const [lastRealtimeEvent, setLastRealtimeEvent] = useState('idle');
 
   useEffect(() => {
-    const modalOpen = summaryModalOpen || Boolean(pendingAction) || settingsOpen || historyOpen || diagOpen;
+    const modalOpen = summaryModalOpen || Boolean(pendingAction) || settingsOpen || historyOpen || diagOpen || directVoiceFallbackOpen;
     document.body.classList.toggle('modal-open', modalOpen);
     return () => document.body.classList.remove('modal-open');
-  }, [diagOpen, historyOpen, pendingAction, settingsOpen, summaryModalOpen]);
+  }, [diagOpen, directVoiceFallbackOpen, historyOpen, pendingAction, settingsOpen, summaryModalOpen]);
 
   const peerRef = useRef(null);
   const channelRef = useRef(null);
@@ -1453,7 +1502,7 @@ function App() {
     sendUserText,
   ]);
 
-  const startSession = useCallback(async () => {
+  const startSession = useCallback(async ({ directApiKey = '' } = {}) => {
     if (startInProgressRef.current || connecting || connected) return;
     if (!online) {
       setError('You appear to be offline. Reconnect to start a secure voice session.');
@@ -1473,15 +1522,51 @@ function App() {
     let remoteDescriptionApplied = false;
 
     try {
-      const tokenResponse = await fetch('/api/realtime/token', {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-        cache: 'no-store',
-      });
-      const token = await readJsonResponse(tokenResponse, 'Realtime token endpoint');
+      let token;
+      const trimmedDirectApiKey = directApiKey.trim();
+
+      if (trimmedDirectApiKey) {
+        setStatus('Creating a direct demo session…');
+        const directTokenResponse = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${trimmedDirectApiKey}`,
+            'Content-Type': 'application/json',
+            'OpenAI-Safety-Identifier': `voges-demo-${crypto.randomUUID()}`,
+          },
+          body: JSON.stringify({ session: buildTokenSessionConfig({ voice }) }),
+          cache: 'no-store',
+          credentials: 'omit',
+          referrerPolicy: 'no-referrer',
+        });
+        token = await readJsonResponse(directTokenResponse, 'Direct Realtime token endpoint');
+        // The browser-only key is intentionally never persisted or logged.
+        setDirectVoiceApiKey('');
+        setDirectVoiceError('');
+        setDirectVoiceFallbackOpen(false);
+        currentSessionIdRef.current = null;
+      } else {
+        try {
+          const tokenResponse = await fetch('/api/realtime/token', {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+            cache: 'no-store',
+          });
+          token = await readJsonResponse(tokenResponse, 'Realtime token endpoint');
+        } catch (tokenError) {
+          if (isUnsupportedRegionError(tokenError)) {
+            setDirectVoiceError('Cloudflare cannot reach the Realtime service from its current region.');
+            setDirectVoiceFallbackOpen(true);
+            setStatus('Direct demo connection required');
+            setVoiceMode('idle');
+            return;
+          }
+          throw tokenError;
+        }
+        currentSessionIdRef.current = token.session_id || null;
+      }
       const ephemeralKey = token.value;
       if (!ephemeralKey) throw new Error('The realtime token response was empty.');
-      currentSessionIdRef.current = token.session_id || null;
       sessionFinalizedRef.current = false;
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1628,8 +1713,16 @@ function App() {
       }, 20_000);
     } catch (sessionError) {
       stopSession({ silent: true });
-      setError(formatSessionError(sessionError));
-      setFatalError(formatSessionError(sessionError));
+      const message = formatSessionError(sessionError);
+      if (directApiKey.trim()) {
+        setDirectVoiceError(message);
+        setDirectVoiceFallbackOpen(true);
+        setError('');
+        setFatalError('');
+      } else {
+        setError(message);
+        setFatalError(message);
+      }
       setStatus('Ready when you are');
       setVoiceMode('idle');
     } finally {
@@ -1974,6 +2067,23 @@ function App() {
             handleSummaryAction(action);
           }}
           onClose={() => setSummaryModalOpen(false)}
+        />
+        <DirectVoiceFallbackSheet
+          open={directVoiceFallbackOpen}
+          apiKey={directVoiceApiKey}
+          error={directVoiceError}
+          busy={connecting}
+          onChange={(value) => {
+            setDirectVoiceApiKey(value);
+            setDirectVoiceError('');
+          }}
+          onClose={() => {
+            if (connecting) return;
+            setDirectVoiceApiKey('');
+            setDirectVoiceError('');
+            setDirectVoiceFallbackOpen(false);
+          }}
+          onConnect={() => startSession({ directApiKey: directVoiceApiKey })}
         />
         <ApprovalSheet
           action={pendingAction}
