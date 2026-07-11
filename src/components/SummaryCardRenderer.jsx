@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { Component, memo } from 'react';
 import {
   ArrowRight,
   BadgeCheck,
@@ -12,11 +12,22 @@ import {
 import { validateSummaryCard } from '../../shared/ui-contracts.js';
 
 function formatMoney(amount, currency = 'VND') {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: currency === 'VND' ? 0 : 2,
-  }).format(Number(amount || 0));
+  const value = Number(amount);
+  const safeValue = Number.isFinite(value) ? value : 0;
+  const safeCurrency = String(currency || 'VND').trim().toUpperCase();
+
+  // Some real banking-ledger assets (for example PAXG) are not ISO-4217
+  // currency codes. Intl throws for them; a display card must never take down
+  // the entire voice UI because one transaction uses a non-fiat asset code.
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: safeCurrency,
+      maximumFractionDigits: safeCurrency === 'VND' ? 0 : 2,
+    }).format(safeValue);
+  } catch {
+    return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(safeValue)} ${safeCurrency}`;
+  }
 }
 
 function formatDate(value) {
@@ -248,6 +259,35 @@ const CARD_COMPONENTS = {
   generic_info: GenericInfoCard,
 };
 
+class SummaryCardErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { failed: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error) {
+    // Keep a card-level rendering fault isolated. Do not log card data, which
+    // may contain banking context; only the error name is useful for diagnosis.
+    console.error('Summary card render failed:', error?.name || 'unknown_error');
+  }
+
+  render() {
+    if (this.state.failed) {
+      return (
+        <article className="summary-card summary-card-error" role="status">
+          <h3>{this.props.title || 'Summary unavailable'}</h3>
+          <p>This result could not be displayed as a card. Your voice conversation is still active.</p>
+        </article>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export const SummaryCardRenderer = memo(function SummaryCardRenderer({ card, onAction }) {
   const safeCard = validateSummaryCard(card);
   const Component = CARD_COMPONENTS[safeCard.type] || GenericInfoCard;
@@ -279,7 +319,9 @@ export const SummaryCardDeck = memo(function SummaryCardDeck({ cards, onAction, 
   return (
     <section className="summary-card-deck" aria-label="Visual summaries">
       {cards.map((card, index) => (
-        <SummaryCardRenderer key={`${card.type}-${card.title}-${index}`} card={card} onAction={onAction} />
+        <SummaryCardErrorBoundary key={`${card?.type}-${card?.title}-${index}`} title={card?.title}>
+          <SummaryCardRenderer card={card} onAction={onAction} />
+        </SummaryCardErrorBoundary>
       ))}
     </section>
   );
