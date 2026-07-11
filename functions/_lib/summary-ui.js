@@ -42,6 +42,7 @@ function buildTransactionSummary(result) {
 
   const largest = [...transactions]
     .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))[0];
+  const declinedTransaction = transactions.find((transaction) => transaction.status === 'declined');
 
   return validateSummaryResponse({
     spoken_response: '',
@@ -62,7 +63,17 @@ function buildTransactionSummary(result) {
       },
       actions: [
         { label: 'View all', action: 'history:transactions', variant: 'ghost' },
-        { label: 'Explain a transaction', action: 'voice:explain_transaction', variant: 'ghost' },
+        {
+          label: declinedTransaction ? 'Explain declined payment' : 'Explain a transaction',
+          action: 'tool:explain_decline_reason',
+          variant: 'ghost',
+          payload: declinedTransaction
+            ? {
+                transaction_id: declinedTransaction.id,
+                merchant: declinedTransaction.merchant,
+              }
+            : {},
+        },
       ],
       metadata: { source: 'getRecentTransactions' },
     },

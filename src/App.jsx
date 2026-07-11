@@ -1993,17 +1993,46 @@ function App() {
     setSuccessState(null);
   }, []);
 
+  const explainTransactionFromSummary = useCallback(async (action) => {
+    try {
+      setSummaryLoading(true);
+      setSummaryError('');
+      setSummaryModalOpen(true);
+      pushTimeline('Explaining transaction', action?.payload?.merchant || '', 'processing');
+      const payload = await api('/api/banking/tools', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: 'explainDeclineReason',
+          arguments: action?.payload || {},
+          session_id: currentSessionIdRef.current,
+          user_request: 'Explain the selected transaction from the banking insight.',
+        }),
+      });
+      finalizeTimelineStep('completed');
+      if (payload.ui) pushSummaryCard(payload.ui);
+      if (connected) {
+        requestVoiceResponse(
+          `Explain this selected declined payment naturally and concisely for the customer. Use the verified banking result only: ${JSON.stringify(payload.data)}`,
+        );
+      }
+    } catch (explainError) {
+      finalizeTimelineStep('error');
+      setSummaryLoading(false);
+      setSummaryError(normalizeErrorMessage(explainError.message || 'Could not explain that transaction.'));
+    }
+  }, [api, connected, finalizeTimelineStep, pushSummaryCard, pushTimeline, requestVoiceResponse]);
+
   const handleSummaryAction = useCallback((action) => {
     setSummaryModalOpen(false);
     if (!action?.action) return;
-    if (action.action === 'voice:explain_transaction') {
-      sendUserText('Explain the most recent transaction.', 'Summary action');
+    if (action.action === 'tool:explain_decline_reason' || action.action === 'voice:explain_transaction') {
+      void explainTransactionFromSummary(action);
       return;
     }
     if (action.action === 'history:transactions') {
       setHistoryOpen(true);
     }
-  }, [sendUserText]);
+  }, [explainTransactionFromSummary]);
 
   const handleArchiveHistory = useCallback(async (sessionId) => {
     try {

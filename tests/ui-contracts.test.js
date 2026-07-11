@@ -42,3 +42,31 @@ test('card status summary keeps only last four digits', () => {
   assert.equal(result.ui.data.cards[0].last_four, '4242');
   assert.equal(result.ui.data.cards[0].kind, 'physical');
 });
+
+test('transaction summary explain action targets the declined transaction', () => {
+  const result = buildSummaryForTool('getRecentTransactions', {
+    transactions: [
+      {
+        id: 'txn_ok',
+        merchant_name: 'Coffee Shop',
+        amount: -125,
+        currency: 'PHP',
+        status: 'completed',
+        created_at: '2026-07-11T08:00:00Z',
+      },
+      {
+        id: 'txn_declined',
+        merchant_name: 'Netflix',
+        amount: -499,
+        currency: 'PHP',
+        status: 'declined',
+        created_at: '2026-07-11T07:00:00Z',
+      },
+    ],
+  });
+
+  const action = result.ui.actions.find((item) => item.action === 'tool:explain_decline_reason');
+  assert.equal(action.label, 'Explain declined payment');
+  assert.equal(action.payload.transaction_id, 'txn_declined');
+  assert.equal(action.payload.merchant, 'Netflix');
+});
