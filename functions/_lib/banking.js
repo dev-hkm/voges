@@ -12,12 +12,14 @@ const DECLINE_EXPLANATIONS = {
 };
 
 export const TOOL_DEFINITIONS = [
+  { type: 'function', name: 'getConversationGuidance', description: 'Get backend conversation guidance for a vague or incomplete banking request. Never executes an action.', parameters: { type: 'object', properties: {}, additionalProperties: false } },
   { type: 'function', name: 'getCustomerProfile', description: 'Read the identified customer profile, accounts, KYC status, and account status.', parameters: { type: 'object', properties: {}, additionalProperties: false } },
   { type: 'function', name: 'getRecentTransactions', description: 'Read the customer\'s most recent transactions. Use merchant when the customer mentions a merchant such as Netflix.', parameters: { type: 'object', properties: { merchant: { type: 'string', description: 'Optional merchant name to match.' }, limit: { type: 'integer', minimum: 1, maximum: 10 } }, additionalProperties: false } },
   { type: 'function', name: 'getCardStatus', description: 'Read card status, payment toggles, and limits for the customer.', parameters: { type: 'object', properties: { card_id: { type: 'string', description: 'Optional card ID if known.' } }, additionalProperties: false } },
   { type: 'function', name: 'getKycStatus', description: 'Read the customer\'s KYC status and latest submitted document status.', parameters: { type: 'object', properties: {}, additionalProperties: false } },
   { type: 'function', name: 'explainDeclineReason', description: 'Explain the reason for a declined transaction. Use merchant or transaction_id when known.', parameters: { type: 'object', properties: { transaction_id: { type: 'string' }, merchant: { type: 'string' } }, additionalProperties: false } },
   { type: 'function', name: 'generateFundingInstruction', description: 'Read official funding instructions from bank product documents.', parameters: { type: 'object', properties: {}, additionalProperties: false } },
+  { type: 'function', name: 'startResolutionAutopilot', description: 'Build a safe, server-verified resolution plan for a payment problem. This never executes an action.', parameters: { type: 'object', properties: { merchant: { type: 'string' }, transaction_id: { type: 'string' } }, additionalProperties: false } },
   { type: 'function', name: 'createSupportTicket', description: 'Propose a support ticket. This never creates or changes a ticket in V2.', parameters: { type: 'object', properties: { subject: { type: 'string' }, description: { type: 'string' } }, required: ['subject'], additionalProperties: false } },
 ];
 

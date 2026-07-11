@@ -10,6 +10,10 @@ const ACTIONS = {
   createSupportTicket: { riskLevel: 'medium', requiresConfirmation: true, requiresBiometric: false, allowedAccountStatuses: ['active','frozen','limited'], fields: ['subject'] },
   generateFundingInstructions: { riskLevel: 'medium', requiresConfirmation: true, requiresBiometric: false, allowedAccountStatuses: ['active'], fields: [] },
   escalateToHuman: { riskLevel: 'low', requiresConfirmation: false, requiresBiometric: false, allowedAccountStatuses: ['active','frozen','limited','closed'], fields: ['subject'] },
+  updateCardDailyLimit: { riskLevel: 'high', requiresConfirmation: true, requiresBiometric: true, allowedAccountStatuses: ['active'], fields: ['card_id', 'daily_limit'] },
+  // A Resolution Plan is one bounded contract. Its child steps are revalidated
+  // independently immediately before execution; the model cannot add tools.
+  executeResolutionPlan: { riskLevel: 'high', requiresConfirmation: true, requiresBiometric: true, allowedAccountStatuses: ['active'], fields: ['plan_id', 'plan_hash', 'plan'] },
 };
 export const ACTION_METADATA = Object.entries(ACTIONS).map(([name, value]) => ({ name, auditRequired: true, ...value }));
 export const READ_TOOLS = new Set(['getCustomerProfile','getKycStatus','getAccountBalance','getRecentTransactions','getCardStatus','explainDeclineReason','getCardLimits','getProductInformation','generateFundingInstruction']);
@@ -22,7 +26,9 @@ export async function evaluatePolicy({ db, customerId, toolName, payload = {}, u
   if (forbidden.test(userRequest) || /^(transfer|addBeneficiary|reveal)/.test(toolName || '')) return decision('block','blocked',rules.concat('prohibited_request'),'This request is prohibited by banking policy.');
   if (!meta) return decision('block','blocked',rules.concat('tool_not_allowlisted'),'This action is not in the approved tool allowlist.');
   if (!Number.isFinite(Number(aiConfidence)) || Number(aiConfidence) < 0.85) return decision('escalate','medium',rules.concat('low_confidence'),'The request needs a human review.');
-  for (const field of meta.fields) if (typeof payload[field] !== 'string' && typeof payload[field] !== 'boolean') return decision('block','blocked',rules.concat('invalid_payload'),`Missing or invalid ${field}.`);
+  for (const field of meta.fields) if (typeof payload[field] !== 'string' && typeof payload[field] !== 'boolean' && typeof payload[field] !== 'number' && typeof payload[field] !== 'object') return decision('block','blocked',rules.concat('invalid_payload'),`Missing or invalid ${field}.`);
+  if (toolName === 'updateCardDailyLimit' && (!Number.isFinite(Number(payload.daily_limit)) || Number(payload.daily_limit) <= 0)) return decision('block','blocked',rules.concat('invalid_limit'),'The requested card limit is invalid.');
+  if (toolName === 'executeResolutionPlan' && (!payload.plan || payload.plan.plan_hash !== payload.plan_hash || payload.plan.id !== payload.plan_id)) return decision('block','blocked',rules.concat('invalid_resolution_plan'),'The Resolution Plan contract is invalid.');
   if (!meta.allowedAccountStatuses.includes(customer.account_status)) return decision('block','blocked',rules.concat('account_status'),'This account is not permitted to perform that action.');
   if (customer.account_status === 'frozen' && meta.riskLevel !== 'low') return decision('block','blocked',rules.concat('frozen_account'),'Financial changes are unavailable while the account is frozen.');
   let card = null;

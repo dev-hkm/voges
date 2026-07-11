@@ -28,6 +28,7 @@ import {
   X,
 } from 'lucide-react';
 import { ACTION_TOOL_NAMES, BANKING_TOOLS, SUGGESTED_ACTIONS, TOOL_LABELS } from './banking';
+import { ambiguityMessage, routeToolCall } from './intent-router.js';
 import { SummaryCardDeck } from './components/SummaryCardRenderer.jsx';
 import { HistoryDrawer } from './components/HistoryDrawer.jsx';
 import {
@@ -159,6 +160,7 @@ function normalizeErrorMessage(message) {
   if (/No microphone was found/i.test(value)) return 'No microphone was found. Connect one and try again.';
   if (/being used by another app/i.test(value)) return 'Your microphone is in use by another app. Close that app and try again.';
   if (/WebAuthn is not supported/i.test(value)) return 'This browser does not support passkeys on this device.';
+  if (/relying party|securityerror|different local address|not a valid domain/i.test(value)) return 'Device verification needs the canonical localhost address. Voges is switching to it now.';
   if (/No passkey is registered/i.test(value)) return 'No passkey is set up yet. Add device verification first.';
   if (/Device verification failed/i.test(value)) return 'Could not verify your identity. Please try again.';
   if (/Device verification was cancelled/i.test(value)) return 'Verification was cancelled. No action was completed.';
@@ -422,6 +424,8 @@ const IconButton = memo(function IconButton({ label, children, onClick, active =
 });
 
 const VoiceOrb = memo(function VoiceOrb({ mode, energy, muted, onClick, disabled, isError, isConnected }) {
+  const level = muted ? 0 : Math.min(1, Math.max(0, energy || 0));
+  const spectrum = [0.56, 0.82, 1, 0.76, 0.52];
   return (
     <div className="voice-orb-wrapper">
       {isConnected && !isError && <div className="orb-status-text success">Connected</div>}
@@ -437,7 +441,7 @@ const VoiceOrb = memo(function VoiceOrb({ mode, energy, muted, onClick, disabled
         <div className="voice-orb-core">
           <span className="voice-orb-signal" aria-hidden="true">
             {Array.from({ length: 5 }).map((_, index) => (
-              <span key={index} style={{ '--signal-index': index }} />
+              <span key={index} style={{ '--signal-index': index, '--signal-level': (0.18 + level * spectrum[index]).toFixed(3) }} />
             ))}
           </span>
         </div>
@@ -589,13 +593,13 @@ const MessageList = memo(function MessageList({ messages, liveUserTurn, liveAssi
   );
 });
 
-const ApprovalSheet = memo(function ApprovalSheet({ action, actionBusy, customerContext, onCancel, onConfirm }) {
+const ApprovalSheet = memo(function ApprovalSheet({ action, actionBusy, customerContext, hasPasskey, onCancel, onConfirm }) {
   if (!action) return null;
 
   const preview = deriveActionPreview(action, customerContext);
   const buttonLabel = actionBusy
     ? (action.requires_biometric ? 'Opening device verification…' : 'Confirming action…')
-    : (action.requires_biometric ? 'Verify' : 'Confirm');
+    : (action.requires_biometric ? (hasPasskey === false ? 'Set up & verify' : 'Verify') : 'Confirm');
 
   return (
     <div className="approval-backdrop" role="dialog" aria-modal="true" aria-label="Approve secure banking action">
@@ -637,6 +641,9 @@ const ApprovalSheet = memo(function ApprovalSheet({ action, actionBusy, customer
           <span>For</span>
           <strong>{preview.resourceLabel}</strong>
         </div>
+        {action.requires_biometric && hasPasskey === false ? (
+          <p className="approval-passkey-note">No device passkey is set up yet. Voges will open Windows Hello to set it up, then verify this exact action.</p>
+        ) : null}
         <div className="sheet-actions">
           <button className="secondary-action" onClick={onCancel} disabled={actionBusy} type="button">
             Cancel
@@ -666,6 +673,24 @@ const SummaryModal = memo(function SummaryModal({ open, cards, loading, error, o
           </IconButton>
         </div>
         <SummaryCardDeck cards={cards} loading={loading} error={error} onAction={onAction} />
+      </section>
+    </div>
+  );
+});
+
+const ResolutionPlanModal = memo(function ResolutionPlanModal({ open, card, onAction, onClose }) {
+  if (!open || !card) return null;
+  return (
+    <div className="summary-modal-backdrop resolution-plan-modal-backdrop" role="dialog" aria-modal="true" aria-label="Resolution Autopilot plan">
+      <section className="summary-modal-card resolution-plan-modal-card">
+        <div className="summary-modal-head">
+          <div>
+            <span className="eyebrow">Resolution Autopilot</span>
+            <h2>Here is the safe resolution plan</h2>
+          </div>
+          <IconButton label="Close Resolution Plan" onClick={onClose}><X size={18} /></IconButton>
+        </div>
+        <SummaryCardDeck cards={[card]} onAction={onAction} />
       </section>
     </div>
   );
@@ -977,6 +1002,9 @@ function App() {
   const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState('');
+  const [resolutionPlanCard, setResolutionPlanCard] = useState(null);
+  const [resolutionPlanModalOpen, setResolutionPlanModalOpen] = useState(false);
+  const [resolutionPendingAction, setResolutionPendingAction] = useState(null);
   const [directVoiceFallbackOpen, setDirectVoiceFallbackOpen] = useState(false);
   const [directVoiceApiKey, setDirectVoiceApiKey] = useState('');
   const [directVoiceError, setDirectVoiceError] = useState('');
@@ -999,10 +1027,20 @@ function App() {
   const [lastRealtimeEvent, setLastRealtimeEvent] = useState('idle');
 
   useEffect(() => {
-    const modalOpen = summaryModalOpen || Boolean(pendingAction) || settingsOpen || historyOpen || demoScenariosOpen || diagOpen || directVoiceFallbackOpen;
+    // See functions/_middleware.js. Do this in the client too, so a cached
+    // static page cannot leave the user on an origin that WebAuthn rejects.
+    if (window.location.hostname === '127.0.0.1' && window.location.port === '5173') {
+      const canonical = new URL(window.location.href);
+      canonical.hostname = 'localhost';
+      window.location.replace(canonical.toString());
+    }
+  }, []);
+
+  useEffect(() => {
+    const modalOpen = summaryModalOpen || resolutionPlanModalOpen || Boolean(pendingAction) || settingsOpen || historyOpen || demoScenariosOpen || diagOpen || directVoiceFallbackOpen;
     document.body.classList.toggle('modal-open', modalOpen);
     return () => document.body.classList.remove('modal-open');
-  }, [demoScenariosOpen, diagOpen, directVoiceFallbackOpen, historyOpen, pendingAction, settingsOpen, summaryModalOpen]);
+  }, [demoScenariosOpen, diagOpen, directVoiceFallbackOpen, historyOpen, pendingAction, resolutionPlanModalOpen, settingsOpen, summaryModalOpen]);
 
   const peerRef = useRef(null);
   const channelRef = useRef(null);
@@ -1034,11 +1072,16 @@ function App() {
   const audioContextRef = useRef(null);
   const micSourceRef = useRef(null);
   const micAnalyserRef = useRef(null);
+  const speakerSourceRef = useRef(null);
+  const speakerAnalyserRef = useRef(null);
   const levelAnimationRef = useRef(null);
   const lastLevelPushRef = useRef(0);
   const stopInProgressRef = useRef(false);
   const intentionalStopRef = useRef(false);
   const greetedRef = useRef(false);
+  const activeUserRequestRef = useRef('');
+  const conversationTurnsRef = useRef([]);
+  const proactiveToolBudgetRef = useRef(null);
 
   // Global mouse tracking for dynamic UI interactions
   useEffect(() => {
@@ -1161,11 +1204,36 @@ function App() {
 
   const pushSummaryCard = useCallback((card) => {
     if (!card) return;
-    setSummaryCards((current) => [card, ...current.filter((item) => JSON.stringify(item) !== JSON.stringify(card))].slice(0, 6));
+    // State snapshots must not coexist with an older snapshot after a write.
+    // Keeping an old card-status result visible made a completed D1 update look
+    // fake even though the backend had already applied and audited it.
+    const replaceLatestSnapshot = new Set(['card_status', 'account_balance', 'kyc_status']);
+    setSummaryCards((current) => [
+      card,
+      ...current.filter((item) => replaceLatestSnapshot.has(card.type)
+        ? item.type !== card.type
+        : JSON.stringify(item) !== JSON.stringify(card)),
+    ].slice(0, 6));
     setSummaryModalOpen(true);
     setSummaryLoading(false);
     setSummaryError('');
   }, []);
+
+  const evaluateScamRisk = useCallback(async (userRequest) => {
+    if (!userRequest?.trim()) return;
+    try {
+      const result = await api('/api/scam/evaluate', {
+        method: 'POST',
+        body: JSON.stringify({ user_request: userRequest, session_id: currentSessionIdRef.current }),
+      });
+      if (result.ui) {
+        pushSummaryCard(result.ui);
+        requestVoiceResponse(`A deterministic Scam Risk Advisor found high-risk signals in the customer's latest request. Do not state that it is definitely a scam. Briefly explain the matched concerns, ask one verification question, and give the safe recommendation from this verified result: ${JSON.stringify(result.data)}`, { priority: true, reason: 'scam_risk_advisory' });
+      }
+    } catch {
+      // Advisory evaluation must never interrupt the voice or banking core.
+    }
+  }, [api, pushSummaryCard, requestVoiceResponse]);
 
   const finalizeHistorySession = useCallback((finalOutcome = '') => {
     const sessionId = currentSessionIdRef.current;
@@ -1184,6 +1252,7 @@ function App() {
   const commitMessage = useCallback((message) => {
     const content = message.content?.trim();
     if (!content) return;
+    conversationTurnsRef.current = [...conversationTurnsRef.current, { role: message.role, content }].slice(-6);
 
     setMessages((current) => {
       const existingIndex = current.findIndex((item) => item.itemId && item.itemId === message.itemId);
@@ -1251,8 +1320,11 @@ function App() {
     cancelAnimationFrame(levelAnimationRef.current);
     levelAnimationRef.current = null;
     micSourceRef.current?.disconnect();
+    speakerSourceRef.current?.disconnect();
     micSourceRef.current = null;
     micAnalyserRef.current = null;
+    speakerSourceRef.current = null;
+    speakerAnalyserRef.current = null;
     setMicLevel(0.08);
     setSpeakerLevel(0.08);
   }, []);
@@ -1291,9 +1363,9 @@ function App() {
 
     const tick = (timestamp) => {
       const mic = getLevel(micAnalyserRef.current);
-      // Do not route the remote WebRTC stream through AudioContext. The browser
-      // owns that playback path; touching it can destabilize the peer session.
-      const speaker = assistantPlaybackStartedRef.current ? 0.42 : 0.08;
+      // The analyser is a parallel, read-only branch. Playback continues on the
+      // browser-owned HTMLAudioElement and is never routed through AudioContext.
+      const speaker = getLevel(speakerAnalyserRef.current);
 
       if (timestamp - lastLevelPushRef.current > 66) {
         lastLevelPushRef.current = timestamp;
@@ -1306,6 +1378,29 @@ function App() {
 
     cancelAnimationFrame(levelAnimationRef.current);
     levelAnimationRef.current = requestAnimationFrame(tick);
+  }, []);
+
+  const attachSpeakerMonitoring = useCallback(async (remoteStream) => {
+    if (!remoteStream || !window.AudioContext && !window.webkitAudioContext) return;
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (!audioContextRef.current) audioContextRef.current = new AudioContextCtor();
+    const context = audioContextRef.current;
+    if (context.state === 'suspended') {
+      try { await context.resume(); } catch { return; }
+    }
+    speakerSourceRef.current?.disconnect();
+    try {
+      const analyser = context.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.72;
+      const source = context.createMediaStreamSource(remoteStream);
+      // Intentionally no destination connection: this is visual metering only.
+      source.connect(analyser);
+      speakerSourceRef.current = source;
+      speakerAnalyserRef.current = analyser;
+    } catch (error) {
+      pushDiag('warn', 'remote_audio.meter_unavailable', String(error?.message || error));
+    }
   }, []);
 
   const stopSession = useCallback(({ silent = false } = {}) => {
@@ -1362,8 +1457,8 @@ function App() {
   useEffect(() => () => stopSession({ silent: true }), [stopSession]);
 
   useEffect(() => {
-    Promise.allSettled([loadCustomerContext(), loadPendingAction()]);
-  }, [loadCustomerContext, loadPendingAction]);
+    Promise.allSettled([loadCustomerContext(), loadPendingAction(), loadSecurity()]);
+  }, [loadCustomerContext, loadPendingAction, loadSecurity]);
 
   useEffect(() => {
     const syncOnlineState = () => setOnline(navigator.onLine);
@@ -1442,6 +1537,10 @@ function App() {
     const prompt = value?.trim();
     if (!prompt || channelRef.current?.readyState !== 'open') return false;
 
+    activeUserRequestRef.current = prompt;
+
+    void evaluateScamRisk(prompt);
+
     commitMessage({ role: 'user', meta, content: prompt });
     pushTimeline('Understanding request');
     pushTimeline('Preparing response', '', 'processing');
@@ -1458,7 +1557,7 @@ function App() {
     });
     requestVoiceResponse();
     return true;
-  }, [commitMessage, pushTimeline, requestVoiceResponse, sendEvent]);
+  }, [commitMessage, evaluateScamRisk, pushTimeline, requestVoiceResponse, sendEvent]);
 
   const executeRealtimeTool = useCallback(async (item) => {
     const toolName = item.name;
@@ -1471,34 +1570,90 @@ function App() {
     }
 
     const toolLabel = TOOL_LABELS[toolName] || toolName;
+    const userRequest = activeUserRequestRef.current || 'Customer request was transcribed without a stable text snapshot.';
+    const isConversationGuidance = toolName === 'getConversationGuidance';
+    const proactiveBudget = proactiveToolBudgetRef.current;
+    const routed = routeToolCall({ request: userRequest, toolName });
+    const route = !isConversationGuidance && proactiveBudget
+      ? { intent: 'proactive_investigation', allowed: proactiveBudget.includes(toolName), visible: false, reason: `${toolName} is outside the backend-guided investigation budget.` }
+      : routed;
+    const clarification = ambiguityMessage(userRequest);
     pushTimeline(toolLabel, '', 'processing');
     setSummaryLoading(true);
     setSummaryError('');
 
     try {
+      if (clarification && ACTION_TOOL_NAMES.has(toolName)) {
+        finalizeTimelineStep('completed');
+        pushTimeline('Clarification needed', 'Choose the exact card control', 'processing');
+        sendEvent({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: item.call_id, output: JSON.stringify({ clarification_required: true, instruction: clarification }) } });
+        return;
+      }
+      if (!route.allowed) {
+        finalizeTimelineStep('completed');
+        pushTimeline('Keeping request focused', toolLabel, 'completed');
+        sendEvent({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: item.call_id, output: JSON.stringify({ skipped: true, instruction: route.reason }) } });
+        return;
+      }
+      if (isConversationGuidance) {
+        const response = await fetch('/api/conversation/guide', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ user_request: userRequest, session_id: currentSessionIdRef.current, prior_context: conversationTurnsRef.current }),
+        });
+        const payload = await readJsonResponse(response, 'Conversation guidance');
+        const suggestedTools = Array.isArray(payload.data?.suggested_tools) ? payload.data.suggested_tools : [];
+        proactiveToolBudgetRef.current = suggestedTools.length ? suggestedTools : null;
+        finalizeTimelineStep('completed');
+        setSummaryLoading(false);
+        setSummaryModalOpen(false);
+        if (payload.data?.completion_status === 'needs_clarification') pushTimeline('Clarifying the goal', '', 'completed');
+        else if (suggestedTools.length) pushTimeline('Starting safe investigation', suggestedTools.join(', '), 'processing');
+        sendEvent({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: item.call_id, output: JSON.stringify({ conversation_guidance: payload.data, instruction: 'Follow the backend guidance. Never expose this JSON directly.' }) } });
+        return;
+      }
+      const isResolutionAutopilot = toolName === 'startResolutionAutopilot';
       const isAction = ACTION_TOOL_NAMES.has(toolName);
       if (isAction) pushTimeline('Applying security policy');
-      const response = await fetch(isAction ? '/api/actions/propose' : '/api/banking/tools', {
+      if (isResolutionAutopilot) pushTimeline('Investigating root cause');
+      const response = await fetch(isResolutionAutopilot ? '/api/resolution/analyze' : (isAction ? '/api/actions/propose' : '/api/banking/tools'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify(
-          isAction
-            ? { tool_name: toolName, payload: args, user_request: 'Requested through live voice conversation.', session_id: currentSessionIdRef.current }
-            : { name: toolName, arguments: args, session_id: currentSessionIdRef.current, user_request: 'Requested through live voice conversation.' },
+          isResolutionAutopilot
+            ? { ...args, user_request: userRequest, session_id: currentSessionIdRef.current }
+            : isAction
+            ? { tool_name: toolName, payload: args, user_request: userRequest, session_id: currentSessionIdRef.current }
+            : { name: toolName, arguments: args, session_id: currentSessionIdRef.current, user_request: userRequest },
         ),
       });
 
       const payload = await readJsonResponse(response, `Banking tool ${toolName}`);
-      if (payload.ui) pushSummaryCard(payload.ui);
+      if (proactiveBudget) {
+        const remaining = proactiveBudget.filter((name) => name !== toolName);
+        proactiveToolBudgetRef.current = remaining.length ? remaining : null;
+      }
+      if (isResolutionAutopilot && payload.ui) {
+        setResolutionPlanCard(payload.ui);
+        setResolutionPendingAction(payload.pending_action || null);
+        setResolutionPlanModalOpen(true);
+      } else if (payload.ui && route.visible) pushSummaryCard(payload.ui);
 
       finalizeTimelineStep('completed');
 
-      if (isAction && payload.pending_action) {
+      if (isResolutionAutopilot) {
+        setSummaryModalOpen(false);
+        pushTimeline(payload.pending_action ? 'Resolution Plan ready' : 'Resolution investigation complete', payload.plan?.problem || '', 'completed');
+      } else if (isAction && payload.pending_action) {
         setSummaryModalOpen(false);
         setPendingAction(payload.pending_action);
         pushTimeline('Awaiting approval', payload.pending_action.display_title, 'processing');
-      } else {
+      } else if (route.visible) {
         pushTimeline('Preparing response', '', 'processing');
+      } else {
+        setSummaryLoading(false);
+        setSummaryModalOpen(false);
+        pushTimeline('Using verified context', toolLabel, 'completed');
       }
 
       sendEvent({
@@ -1514,7 +1669,9 @@ function App() {
                   instruction: 'Ask the customer to review the on-screen confirmation. Do not claim it was completed.',
                   ui: payload.ui || null,
                 }
-              : { ...(payload.data || payload), ui: payload.ui || null, spoken_response: payload.spoken_response || '' }
+              : isResolutionAutopilot
+                ? { resolution_plan: payload.plan, action_proposed: Boolean(payload.pending_action), instruction: payload.pending_action ? 'Explain the verified root cause and ask the customer to review the Resolution Plan card on screen. Do not claim any step was completed.' : 'Explain the verified blockers and that no unsafe action will be executed.', ui: payload.ui || null }
+                : { ...(payload.data || payload), ui: payload.ui || null, spoken_response: payload.spoken_response || '' }
           ),
         },
       });
@@ -1601,6 +1758,7 @@ function App() {
     }
 
     if (event.type === 'input_audio_buffer.speech_started') {
+      activeUserRequestRef.current = '';
       inputSpeechActiveRef.current = true;
       const responseSnapshot = getResponseOrchestrator().snapshot();
       if (responseActiveRef.current || responseSnapshot.createPending) {
@@ -1681,6 +1839,7 @@ function App() {
     }
 
     if (event.type === 'conversation.item.input_audio_transcription.delta') {
+      activeUserRequestRef.current = `${activeUserRequestRef.current || ''}${event.delta || ''}`;
       setLiveUserTurn((current) => ({
         itemId: event.item_id,
         content: current?.itemId === event.item_id ? `${current.content}${event.delta || ''}` : (event.delta || ''),
@@ -1688,7 +1847,9 @@ function App() {
     }
 
     if (event.type === 'conversation.item.input_audio_transcription.completed') {
+      activeUserRequestRef.current = event.transcript || liveUserTurnRef.current?.content || activeUserRequestRef.current;
       finalizeLiveUser(event.transcript || liveUserTurnRef.current?.content || '');
+      void evaluateScamRisk(activeUserRequestRef.current);
     }
 
     if (event.type === 'response.output_audio_transcript.delta' || event.type === 'response.output_text.delta') {
@@ -1732,6 +1893,7 @@ function App() {
   }, [
     connected,
     executeRealtimeTool,
+    evaluateScamRisk,
     finalizeLiveAssistant,
     finalizeLiveUser,
     finalizeTimelineStep,
@@ -1849,6 +2011,7 @@ function App() {
       peer.ontrack = (event) => {
         if (!audioRef.current) return;
         audioRef.current.srcObject = event.streams[0];
+        void attachSpeakerMonitoring(event.streams[0]);
         audioRef.current.play().then(() => {
           pushDiag('info', 'remote_audio.playing', {
             readyState: audioRef.current?.readyState,
@@ -1979,18 +2142,24 @@ function App() {
     online,
     pushTimeline,
     sendEvent,
+    attachSpeakerMonitoring,
     startMonitoring,
     stopSession,
     voice,
   ]);
 
+  const registerPasskey = useCallback(async () => {
+    if (!window.PublicKeyCredential) throw new Error('WebAuthn is not supported by this browser.');
+    const options = await api('/api/webauthn/register/options', { method: 'POST' });
+    const response = await startRegistration({ optionsJSON: options });
+    await api('/api/webauthn/register/verify', { method: 'POST', body: JSON.stringify({ response }) });
+    await loadSecurity();
+  }, [api, loadSecurity]);
+
   const setupPasskey = useCallback(async () => {
     try {
       setActionBusy(true);
-      if (!window.PublicKeyCredential) throw new Error('WebAuthn is not supported by this browser.');
-      const options = await api('/api/webauthn/register/options', { method: 'POST' });
-      const response = await startRegistration({ optionsJSON: options });
-      await api('/api/webauthn/register/verify', { method: 'POST', body: JSON.stringify({ response }) });
+      await registerPasskey();
       safeVibrate([10, 40, 10]);
       pushTimeline('Device authentication ready');
       await loadSecurity();
@@ -2000,7 +2169,7 @@ function App() {
     } finally {
       setActionBusy(false);
     }
-  }, [api, loadSecurity, pushTimeline, showSuccess]);
+  }, [pushTimeline, registerPasskey, showSuccess]);
 
   const finishAction = useCallback(async (actionId, executionToken, toolName) => {
     const result = await api(`/api/actions/${actionId}/execute`, {
@@ -2008,14 +2177,39 @@ function App() {
       body: JSON.stringify({ execution_token: executionToken }),
     });
     if (result.ui) pushSummaryCard(result.ui);
+    if (toolName === 'executeResolutionPlan') {
+      setResolutionPendingAction(null);
+      setResolutionPlanCard(null);
+      pushTimeline('Resolution Plan completed', result.data?.resolution_plan?.readiness_check?.status === 'ready_after_plan' ? 'Ready to retry payment' : 'Review remaining blockers');
+    }
     safeVibrate([12, 45, 12]);
     setPendingAction(null);
     pushTimeline('Action completed', describeActionOutcome(toolName));
     showSuccess('Action completed', describeActionOutcome(toolName));
     await Promise.all([loadCustomerContext(), loadPendingAction(), loadSecurity()]);
-    requestVoiceResponse(
-      `The customer-approved, device-verified banking action completed successfully. Explain this exact result naturally and concisely: ${JSON.stringify(result.data)}`,
-    );
+    // Backend apply() has already read the updated row for the audit result.
+    // Read it once more through the public Tool Layer so the visible card is a
+    // fresh D1 snapshot, not the value shown before approval.
+    try {
+      const refreshedCardStatus = await api('/api/banking/tools', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: 'getCardStatus',
+          arguments: {},
+          session_id: currentSessionIdRef.current,
+          user_request: 'Refresh card controls after an approved action.',
+        }),
+      });
+      if (refreshedCardStatus.ui) pushSummaryCard(refreshedCardStatus.ui);
+    } catch (refreshError) {
+      // The action has already completed in D1. Keep the verified result card
+      // visible and surface only a non-fatal refresh issue.
+      pushDiag('warn', 'post_action_snapshot_unavailable', String(refreshError?.message || refreshError));
+    }
+    const voiceCompletion = toolName === 'executeResolutionPlan'
+      ? `The customer approved and device-verified the Resolution Plan. Speak now in the customer's latest language. State the completed steps, whether payment readiness is ready or blocked, and one clear next step. Use only this verified backend result: ${JSON.stringify(result.data)}`
+      : `The customer-approved, device-verified banking action completed successfully. Speak now in the customer's latest language and explain this exact result naturally and concisely: ${JSON.stringify(result.data)}`;
+    requestVoiceResponse(voiceCompletion, { priority: true, reason: 'approved_action_completion' });
   }, [api, loadCustomerContext, loadPendingAction, loadSecurity, pushSummaryCard, pushTimeline, requestVoiceResponse, showSuccess]);
 
   const resolvePendingAction = useCallback(async () => {
@@ -2024,7 +2218,10 @@ function App() {
     try {
       setActionBusy(true);
       pushTimeline('Confirming action');
-      const confirmed = await api(`/api/actions/${pendingAction.id}/confirm`, { method: 'POST' });
+      const alreadyAwaitingVerification = pendingAction.status === 'awaiting_biometric';
+      const confirmed = alreadyAwaitingVerification
+        ? { data: pendingAction }
+        : await api(`/api/actions/${pendingAction.id}/confirm`, { method: 'POST' });
       const action = { ...confirmed.data, payload: pendingAction.payload || {}, policy: pendingAction.policy || null };
       setPendingAction(action);
       safeVibrate(8);
@@ -2035,11 +2232,22 @@ function App() {
       }
 
       pushTimeline('Checking your identity');
-      const options = await api('/api/webauthn/authenticate/options', {
-        method: 'POST',
-        body: JSON.stringify({ pending_action_id: action.id }),
-      });
+      let options;
+      try {
+        options = await api('/api/webauthn/authenticate/options', {
+          method: 'POST', body: JSON.stringify({ pending_action_id: action.id }),
+        });
+      } catch (optionsError) {
+        if (!/No passkey is registered/i.test(String(optionsError?.message || ''))) throw optionsError;
+        pushTimeline('Setting up device verification');
+        await registerPasskey();
+        options = await api('/api/webauthn/authenticate/options', {
+          method: 'POST', body: JSON.stringify({ pending_action_id: action.id }),
+        });
+      }
+      pushDiag('info', 'webauthn.assertion.requested', { action_id: action.id });
       const response = await startAuthentication({ optionsJSON: options });
+      pushDiag('info', 'webauthn.assertion.received', { action_id: action.id });
       const verification = await api('/api/webauthn/authenticate/verify', {
         method: 'POST',
         body: JSON.stringify({ pending_action_id: action.id, response }),
@@ -2056,7 +2264,7 @@ function App() {
     } finally {
       setActionBusy(false);
     }
-  }, [api, finishAction, pendingAction, pushTimeline]);
+  }, [api, finishAction, pendingAction, pushTimeline, registerPasskey]);
 
   const cancelPendingAction = useCallback(async () => {
     try {
@@ -2112,10 +2320,16 @@ function App() {
     setError('');
     setFatalError('');
     setSummaryCards([]);
+    setResolutionPlanCard(null);
+    setResolutionPlanModalOpen(false);
+    setResolutionPendingAction(null);
     setSummaryModalOpen(false);
     setSummaryError('');
     setSummaryLoading(false);
     setSuccessState(null);
+    activeUserRequestRef.current = '';
+    conversationTurnsRef.current = [];
+    proactiveToolBudgetRef.current = null;
   }, []);
 
   const explainTransactionFromSummary = useCallback(async (action) => {
@@ -2154,10 +2368,18 @@ function App() {
       void explainTransactionFromSummary(action);
       return;
     }
+    if (action.action === 'resolution:review') {
+      if (resolutionPendingAction) {
+        setResolutionPlanModalOpen(false);
+        setPendingAction(resolutionPendingAction);
+        pushTimeline('Reviewing Resolution Plan', resolutionPendingAction.display_title, 'processing');
+      }
+      return;
+    }
     if (action.action === 'history:transactions') {
       setHistoryOpen(true);
     }
-  }, [explainTransactionFromSummary]);
+  }, [explainTransactionFromSummary, pushTimeline, resolutionPendingAction]);
 
   const handleArchiveHistory = useCallback(async (sessionId) => {
     try {
@@ -2376,6 +2598,12 @@ function App() {
           }}
           onClose={() => setSummaryModalOpen(false)}
         />
+        <ResolutionPlanModal
+          open={resolutionPlanModalOpen && !pendingAction}
+          card={resolutionPlanCard}
+          onAction={handleSummaryAction}
+          onClose={() => setResolutionPlanModalOpen(false)}
+        />
         <DemoScenariosModal
           open={demoScenariosOpen}
           scenarios={DEMO_SCENARIOS}
@@ -2404,6 +2632,7 @@ function App() {
           action={pendingAction}
           actionBusy={actionBusy}
           customerContext={customerContext}
+          hasPasskey={securityData ? Boolean(securityData.passkeys?.length) : null}
           onCancel={cancelPendingAction}
           onConfirm={resolvePendingAction}
         />

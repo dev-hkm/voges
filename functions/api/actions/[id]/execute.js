@@ -1,7 +1,7 @@
 import { demoCustomerId, json, rateLimit } from '../../../_lib/core.js';
 import { executeAction, loadAction } from '../../../_lib/actions.js';
 import { storeSessionCard } from '../../../_lib/session-history.js';
-import { buildSecurityResultSummary, buildSupportTicketSummary } from '../../../_lib/summary-ui.js';
+import { buildResolutionCompleteSummary, buildSecurityResultSummary, buildSupportTicketSummary } from '../../../_lib/summary-ui.js';
 
 export async function onRequestPost({ env, request, params }) {
   try {
@@ -18,7 +18,9 @@ export async function onRequestPost({ env, request, params }) {
       secret: env.EXECUTION_TOKEN_SECRET,
     });
 
-    const ui = data.ticket
+    const ui = data.resolution_plan
+      ? buildResolutionCompleteSummary(data.resolution_plan)
+      : data.ticket
       ? buildSupportTicketSummary(data.ticket)
       : buildSecurityResultSummary({ action, result: data, auditReference: params.id });
 

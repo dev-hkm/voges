@@ -690,6 +690,54 @@ input:focus-visible {
   margin-top: 16px;
 }
 
+.resolution-autopilot-card {
+  width: min(100%, 760px);
+  margin: 18px auto 8px;
+}
+
+.resolution-autopilot-card .summary-card {
+  border-color: color-mix(in srgb, var(--line) 72%, #75b798 28%);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--surface) 92%, #1a2e24 8%), var(--surface));
+}
+
+.resolution-problem,
+.resolution-section,
+.resolution-outcome {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface-strong) 76%, transparent);
+}
+
+.resolution-problem > span,
+.resolution-section > span,
+.resolution-outcome > span {
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.resolution-row {
+  display: grid;
+  gap: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.resolution-row strong { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.resolution-row small, .resolution-outcome small { color: var(--muted); line-height: 1.45; }
+.resolution-row em { font-size: 10px; font-style: normal; text-transform: uppercase; letter-spacing: .08em; }
+.resolution-outcome.is-ready { border-color: color-mix(in srgb, #3bb273 50%, var(--line)); }
+.resolution-outcome.is-blocked { border-color: color-mix(in srgb, #d85c5c 45%, var(--line)); }
+.resolution-security { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.scam-risk-level { display: flex; justify-content: space-between; align-items: center; padding: 14px; border-radius: 16px; background: color-mix(in srgb, #d85c5c 12%, var(--surface-2)); border: 1px solid color-mix(in srgb, #d85c5c 48%, var(--line)); }
+.scam-risk-level span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+.scam-risk-level strong { color: #d85c5c; font-size: 15px; text-transform: uppercase; letter-spacing: .08em; }
+.scam-question { display: block; color: var(--ink); line-height: 1.45; }
+
 .summary-card-action {
   min-height: 40px;
   padding: 0 14px;
@@ -1123,10 +1171,16 @@ input:focus-visible {
   border-radius: 999px;
   background: currentColor;
   opacity: 0.78;
+  transform: scaleY(var(--signal-level, .18));
   transform-origin: center;
+  transition: transform 70ms linear, opacity 100ms linear;
+  box-shadow: 0 0 16px color-mix(in srgb, currentColor 42%, transparent);
+}
+
+.voice-orb.mode-idle .voice-orb-signal span,
+.voice-orb.mode-thinking .voice-orb-signal span {
   animation: orb-signal 1.25s ease-in-out infinite;
   animation-delay: calc(var(--signal-index) * 0.09s);
-  box-shadow: 0 0 16px color-mix(in srgb, currentColor 42%, transparent);
 }
 
 .voice-orb:hover:not(:disabled) .voice-orb-signal {

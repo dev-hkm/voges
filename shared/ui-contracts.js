@@ -9,6 +9,9 @@ export const SUMMARY_CARD_TYPES = [
   'pending_action',
   'support_ticket',
   'security_result',
+  'resolution_plan',
+  'resolution_complete',
+  'scam_risk',
   'session_summary',
   'generic_info',
 ];
@@ -152,6 +155,51 @@ const securityResultSchema = summaryCardBase.extend({
   }),
 });
 
+const resolutionStepSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().min(1),
+  risk_level: z.string().min(1),
+  estimated_effect: z.string().min(1),
+  status: z.string().optional(),
+});
+
+const resolutionPlanSchema = summaryCardBase.extend({
+  type: z.literal('resolution_plan'),
+  data: z.object({
+    plan_id: z.string().min(1),
+    problem: z.string().min(1),
+    root_causes: z.array(z.object({ code: z.string(), label: z.string(), status: z.string(), detail: z.string() })),
+    steps: z.array(resolutionStepSchema),
+    expected_result: z.string().min(1),
+    readiness_status: z.string().min(1),
+    blockers: z.array(z.string()).default([]),
+    requires_biometric: z.boolean(),
+    estimated_risk: z.string().min(1),
+  }),
+});
+
+const resolutionCompleteSchema = summaryCardBase.extend({
+  type: z.literal('resolution_complete'),
+  data: z.object({
+    problem: z.string().min(1),
+    completed_steps: z.array(z.string()).default([]),
+    readiness_status: z.string().min(1),
+    blockers: z.array(z.string()).default([]),
+    verification: z.string().min(1),
+  }),
+});
+
+const scamRiskSchema = summaryCardBase.extend({
+  type: z.literal('scam_risk'),
+  data: z.object({
+    risk_level: z.enum(['low', 'medium', 'high']),
+    matched_patterns: z.array(z.object({ id: z.string(), name: z.string(), red_flags: z.array(z.string()).default([]) })),
+    recommendation: z.string().min(1),
+    verification_questions: z.array(z.string()).default([]),
+  }),
+});
+
 const sessionSummarySchema = summaryCardBase.extend({
   type: z.literal('session_summary'),
   data: z.object({
@@ -185,6 +233,9 @@ export const summaryCardSchema = z.discriminatedUnion('type', [
   pendingActionSchema,
   supportTicketSchema,
   securityResultSchema,
+  resolutionPlanSchema,
+  resolutionCompleteSchema,
+  scamRiskSchema,
   sessionSummarySchema,
   genericInfoSchema,
 ]);

@@ -1,0 +1,502 @@
+[
+  {
+    "id": "scam_01",
+    "name": "Mạo danh nhân viên ngân hàng gọi điện",
+    "category": "vishing_impersonation",
+    "channel": ["phone_call"],
+    "attack_goal": ["collect_otp", "steal_online_banking_credentials", "force_remote_access"],
+    "risk_level": "high",
+    "description": "Kẻ gian gọi điện tự xưng là nhân viên ngân hàng, thông báo có giao dịch bất thường, nợ xấu hoặc khóa tài khoản, rồi yêu cầu khách đọc OTP, mật khẩu, hoặc truy cập link để xác minh.",
+    "script_examples": [
+      "Anh/chị đang có giao dịch bất thường, ngân hàng cần xác minh ngay, anh/chị đọc giúp em mã OTP để em khóa tài khoản cho an toàn.",
+      "Thẻ của anh/chị đang bị tính phí lạ, nếu không xác nhận ngay sẽ bị khóa, anh/chị đăng nhập vào đường link em gửi để kiểm tra.",
+      "Hệ thống báo anh/chị có khoản vay không thanh toán, anh/chị cho em xin số CMND/CCCD, mật khẩu đăng nhập để em hỗ trợ tra soát."
+    ],
+    "red_flags": [
+      "Tự xưng nhân viên ngân hàng nhưng gọi từ số lạ hoặc giọng nói không rõ đơn vị.",
+      "Yêu cầu cung cấp OTP, mật khẩu, hoặc thông tin đăng nhập qua điện thoại.",
+      "Hối thúc xử lý ngay, dọa khóa tài khoản hoặc phạt tiền nếu không làm theo."
+    ],
+    "assistant_safe_response": "Ngân hàng không bao giờ yêu cầu khách hàng cung cấp OTP, mật khẩu hay đăng nhập qua đường link gửi trong cuộc gọi. Quý khách vui lòng ngắt cuộc gọi và liên hệ lại tổng đài chính thức của ngân hàng bằng số điện thoại trên website/app chính thức."
+  },
+  {
+    "id": "scam_02",
+    "name": "SMS giả mạo thương hiệu ngân hàng (smishing)",
+    "category": "smishing_brandname",
+    "channel": ["sms"],
+    "attack_goal": ["phishing_credentials", "install_malware"],
+    "risk_level": "high",
+    "description": "Tin nhắn SMS giả mạo tên thương hiệu ngân hàng, báo giao dịch bất thường hoặc nâng cấp hệ thống, kèm đường link dẫn tới website giả hoặc file độc hại.",
+    "script_examples": [
+      "[BANK] Tài khoản của quý khách tạm khóa do giao dịch bất thường. Vui lòng truy cập https://secure-bank-update.com để mở khóa.",
+      "[BANK] Quý khách cần cập nhật thông tin định danh eKYC trước ngày hôm nay. Truy cập link sau để tránh gián đoạn dịch vụ: http://update-ekyc-bank.com",
+      "Cảnh báo: Tài khoản Internet Banking sẽ hết hạn. Nhấn vào đây để gia hạn: http://renew-online-banking.vn"
+    ],
+    "red_flags": [
+      "Link lạ không phải tên miền chính thức của ngân hàng.",
+      "Nội dung thúc ép thao tác ngay, dùng từ ngữ gây hoang mang.",
+      "Yêu cầu đăng nhập, nhập OTP hoặc tải ứng dụng qua link trong SMS."
+    ],
+    "assistant_safe_response": "Quý khách chỉ nên truy cập ứng dụng và website chính thức của ngân hàng, không nhấn vào các đường link trong SMS lạ. Nếu nhận được tin nhắn đáng ngờ, hãy gọi tổng đài ngân hàng để kiểm tra trước khi thực hiện bất kỳ thao tác nào."
+  },
+  {
+    "id": "scam_03",
+    "name": "Email phishing giả mạo ngân hàng",
+    "category": "email_phishing",
+    "channel": ["email"],
+    "attack_goal": ["phishing_credentials", "install_malware"],
+    "risk_level": "medium",
+    "description": "Email sử dụng logo, tên ngân hàng, thông báo trúng thưởng, hoàn tiền hoặc cập nhật bảo mật, yêu cầu khách mở file đính kèm hoặc bấm link đăng nhập để xác thực.",
+    "script_examples": [
+      "Ngân hàng trân trọng thông báo: Quý khách được hoàn 15% giá trị giao dịch thẻ. Vui lòng đăng nhập tại cổng ưu đãi dưới đây để nhận thưởng.",
+      "Vì lý do bảo mật, quý khách cần cập nhật mật khẩu Internet Banking. Nhấn vào link bên dưới và nhập thông tin để xác nhận.",
+      "Đính kèm là bản sao kê giao dịch bất thường, quý khách mở file và làm theo hướng dẫn để khóa tài khoản."
+    ],
+    "red_flags": [
+      "Địa chỉ email gửi đến không phải tên miền chính thức của ngân hàng.",
+      "Tập tin đính kèm dạng .zip, .exe, hoặc định dạng lạ.",
+      "Link đăng nhập không trỏ tới website chính thức của ngân hàng."
+    ],
+    "assistant_safe_response": "Ngân hàng không yêu cầu khách mở file lạ hoặc đăng nhập qua link trong email để nhận thưởng hay xử lý giao dịch. Quý khách hãy kiểm tra địa chỉ email gửi, không tải file khả nghi và chỉ đăng nhập trên ứng dụng/website chính thức."
+  },
+  {
+    "id": "scam_04",
+    "name": "Website giả mạo ngân hàng hoặc cơ quan quản lý",
+    "category": "fake_website",
+    "channel": ["web", "social"],
+    "attack_goal": ["phishing_credentials", "collect_personal_data"],
+    "risk_level": "high",
+    "description": "Kẻ gian dựng trang web có giao diện giống ngân hàng hoặc Ngân hàng Nhà nước / cơ quan nhà nước, yêu cầu người dùng đăng nhập, nhập thông tin cá nhân, số thẻ, OTP.",
+    "script_examples": [
+      "Trang web hiển thị form 'Xác minh tài khoản' với logo ngân hàng, yêu cầu nhập số CMND/CCCD, số thẻ, mật khẩu.",
+      "Giả trang 'tra cứu nợ xấu' của cơ quan nhà nước, yêu cầu người dùng nhập đủ thông tin cá nhân để 'kiểm tra khoản vay'.",
+      "Hiển thị thông báo: 'Hệ thống đang nâng cấp, quý khách vui lòng đăng nhập lại để đồng bộ dữ liệu'."
+    ],
+    "red_flags": [
+      "Tên miền gần giống nhưng không trùng tên miền chính thức (ví dụ .net, .co, .xyz).",
+      "Lỗi chính tả, giao diện thiếu chuẩn mực hoặc thiếu thông tin pháp lý.",
+      "Không có chứng chỉ bảo mật đáng tin cậy, hoặc hiển thị cảnh báo trình duyệt."
+    ],
+    "assistant_safe_response": "Quý khách chỉ nên truy cập website chính thức của ngân hàng hoặc cơ quan nhà nước qua địa chỉ đã được công bố. Nếu nghi ngờ website giả, hãy dừng thao tác, không nhập thông tin và liên hệ ngân hàng để xác minh."
+  },
+  {
+    "id": "scam_05",
+    "name": "Ứng dụng ngân hàng giả / file APK độc hại",
+    "category": "fake_app_malware",
+    "channel": ["sms", "social", "web"],
+    "attack_goal": ["install_malware", "steal_device_otp"],
+    "risk_level": "high",
+    "description": "Đối tượng phát tán app giả mạo ngân hàng hoặc gửi file APK qua link, yêu cầu khách cài đặt để 'nhận ưu đãi' hoặc 'hỗ trợ khoản vay', sau đó chiếm quyền thiết bị và đọc OTP.",
+    "script_examples": [
+      "Nhân viên tự xưng ngân hàng gửi link tải file .apk và hướng dẫn cài để 'đăng ký vay vốn online nhanh'.",
+      "Quảng cáo trên mạng xã hội: 'Ứng dụng đầu tư lãi cao liên kết ngân hàng, tải ngay để nhận tiền thưởng'.",
+      "Tin nhắn: 'Cài đặt ứng dụng bảo mật mới để chống hacker, tải tại link sau'."
+    ],
+    "red_flags": [
+      "Yêu cầu tải app từ nguồn ngoài kho ứng dụng chính thức (Google Play, App Store).",
+      "File cài đặt có đuôi .apk, .apkx được gửi qua chat, SMS, email.",
+      "Sau khi cài, app đòi nhiều quyền truy cập SMS, danh bạ, trợ năng, điều khiển màn hình."
+    ],
+    "assistant_safe_response": "Quý khách chỉ nên cài đặt ứng dụng ngân hàng từ kho ứng dụng chính thức. Không tải và cài app từ đường link lạ. Nếu đã cài ứng dụng đáng ngờ, hãy ngắt kết nối internet, gỡ bỏ ngay và liên hệ ngân hàng để kiểm tra tài khoản."
+  },
+  {
+    "id": "scam_06",
+    "name": "Chuyển tiền làm mồi rồi yêu cầu 'tra soát giao dịch'",
+    "category": "social_engineering_app_fraud",
+    "channel": ["phone_call", "sms"],
+    "attack_goal": ["phishing_credentials", "force_remote_access"],
+    "risk_level": "medium",
+    "description": "Kẻ gian chuyển khoản số tiền nhỏ đến tài khoản nạn nhân, sau đó liên hệ nói giao dịch bị nhầm hoặc bị treo, yêu cầu nạn nhân truy cập link hoặc cung cấp thông tin để 'tra soát' và 'hoàn trả'.",
+    "script_examples": [
+      "Em lỡ chuyển nhầm 500.000 vào tài khoản anh/chị, anh/chị vào link này để xác nhận hoàn lại giúp em.",
+      "Ngân hàng đang treo khoản chuyển nhầm, anh/chị cần đăng nhập vào cổng tra soát để tránh ảnh hưởng điểm tín dụng.",
+      "Nếu không xử lý ngay, anh/chị sẽ bị tính là chiếm giữ tiền trái phép, anh/chị đọc giúp em mã OTP để em hỗ trợ điều chỉnh."
+    ],
+    "red_flags": [
+      "Giao dịch chuyển tiền nhỏ trước đó rồi gọi thúc ép xử lý.",
+      "Yêu cầu thao tác qua link lạ hoặc cung cấp OTP để hoàn trả.",
+      "Đưa thông tin pháp lý mơ hồ để gây áp lực (điểm tín dụng, chiếm giữ trái phép)."
+    ],
+    "assistant_safe_response": "Khi có người lạ báo chuyển tiền nhầm, quý khách không nên truy cập bất kỳ đường link nào, không cung cấp OTP hay mật khẩu. Nếu cần hoàn trả, hãy tự thao tác chuyển tiền qua app chính thức sau khi kiểm tra kỹ thông tin."
+  },
+  {
+    "id": "scam_07",
+    "name": "Chiêu 'chuyển nhầm' kèm nội dung cho vay hoặc đầu tư",
+    "category": "loan_investment_scam",
+    "channel": ["phone_call", "sms", "social"],
+    "attack_goal": ["steal_money_via_refund", "recruit_victim_for_scam"],
+    "risk_level": "medium",
+    "description": "Khoản tiền 'chuyển nhầm' đi kèm nội dung như cho vay, đầu tư, chơi hộ… sau đó yêu cầu nạn nhân hoàn trả vào tài khoản khác hoặc tham gia thêm 'gói đầu tư'.",
+    "script_examples": [
+      "Em chuyển nhầm khoản đầu tư, anh/chị hoàn lại sang tài khoản này giúp em, em sẽ gửi hợp đồng sau.",
+      "Anh/chị vừa được chuyển thử 200k trong chương trình góp vốn, nếu muốn nhận thêm hãy hoàn lại và tham gia gói 10 triệu.",
+      "Đây là tiền đặt cọc nhầm, anh/chị hoàn lại để tránh bị kiện."
+    ],
+    "red_flags": [
+      "Tài khoản yêu cầu hoàn trả khác với tài khoản đã chuyển tiền.",
+      "Giới thiệu thêm gói vay/gói đầu tư lãi cao sau đoạn 'nhầm'.",
+      "Không có giấy tờ/biên bản rõ ràng, chỉ nhắn qua chat hoặc gọi miệng."
+    ],
+    "assistant_safe_response": "Quý khách cần hết sức thận trọng với các khoản tiền chuyển đến không rõ lý do. Không nên tham gia thêm các 'gói đầu tư' hay 'cho vay' được giới thiệu kèm theo và chỉ hoàn trả sau khi xác minh kỹ với ngân hàng hoặc cơ quan chức năng."
+  },
+  {
+    "id": "scam_08",
+    "name": "Giả mạo công ty tài chính, mời vay vốn online",
+    "category": "fake_loan_company",
+    "channel": ["phone_call", "social", "sms"],
+    "attack_goal": ["collect_personal_data", "collect_upfront_fees"],
+    "risk_level": "medium",
+    "description": "Đối tượng giả mạo công ty tài chính hoặc đối tác ngân hàng, mời vay vốn nhanh, yêu cầu nạn nhân cung cấp đầy đủ hồ sơ cá nhân và nộp phí/đặt cọc online để được giải ngân.",
+    "script_examples": [
+      "Bên em là đối tác chính thức của ngân hàng, hỗ trợ vay vốn online giải ngân trong 2 giờ, anh/chị chỉ cần chuyển phí hồ sơ 1 triệu.",
+      "Anh/chị cung cấp toàn bộ thông tin CMND, sổ hộ khẩu, sao kê lương để xét duyệt, sau khi được duyệt sẽ nhận tiền ngay.",
+      "Để tránh tồn kho hồ sơ, anh/chị đóng trước phí bảo hiểm khoản vay, số tiền sẽ hoàn lại sau khi giải ngân."
+    ],
+    "red_flags": [
+      "Yêu cầu nộp phí trước khi giải ngân khoản vay.",
+      "Không có địa chỉ văn phòng, giấy phép rõ ràng.",
+      "Dùng tài khoản cá nhân để nhận 'phí hồ sơ' thay vì tài khoản công ty."
+    ],
+    "assistant_safe_response": "Quý khách chỉ nên đăng ký vay qua kênh chính thức của ngân hàng hoặc tổ chức tín dụng được cấp phép. Không đóng bất kỳ khoản phí nào trước khi xác minh đơn vị và hợp đồng theo quy định pháp luật."
+  },
+  {
+    "id": "scam_09",
+    "name": "SIM swap – chiếm đoạt SIM để lấy OTP",
+    "category": "sim_swap",
+    "channel": ["phone_call", "sms"],
+    "attack_goal": ["steal_otp", "takeover_accounts"],
+    "risk_level": "high",
+    "description": "Đối tượng giả mạo nhân viên nhà mạng hoặc lợi dụng thông tin cá nhân để yêu cầu đổi SIM, từ đó nhận toàn bộ SMS OTP và thông báo từ ngân hàng.",
+    "script_examples": [
+      "Chúng tôi là nhà mạng, anh/chị cần nâng cấp SIM lên 4G, vui lòng đọc mã PIN/PUK và OTP để hoàn tất.",
+      "Anh/chị nhắn cú pháp XYZ tới số này để kích hoạt SIM mới, sau đó SIM cũ sẽ ngừng hoạt động.",
+      "Hệ thống đang bảo trì, anh/chị xác nhận thông tin cá nhân để tránh bị khóa số."
+    ],
+    "red_flags": [
+      "SIM bỗng nhiên mất sóng, không liên lạc được trong khi thiết bị vẫn bình thường.",
+      "Có tin nhắn/cuộc gọi lạ yêu cầu thao tác kích hoạt SIM mới.",
+      "Sau đó tài khoản ngân hàng xuất hiện giao dịch trái phép."
+    ],
+    "assistant_safe_response": "Khi SIM của quý khách bị mất sóng bất thường hoặc nhận được yêu cầu thao tác liên quan đến đổi SIM, hãy liên hệ trực tiếp nhà mạng qua số chăm sóc khách hàng chính thức. Không cung cấp mã PIN/PUK, OTP cho bất kỳ ai."
+  },
+  {
+    "id": "scam_10",
+    "name": "Lợi dụng deepfake giọng nói giả người thân để xin tiền gấp",
+    "category": "ai_deepfake_relative",
+    "channel": ["phone_call", "video_call", "social"],
+    "attack_goal": ["steal_money_via_transfer"],
+    "risk_level": "high",
+    "description": "Kẻ gian dùng AI deepfake để giả giọng nói, hình ảnh của người thân, gọi điện hoặc gửi video xin chuyển tiền gấp với lý do cấp cứu, nợ gấp, tai nạn.",
+    "script_examples": [
+      "Mẹ ơi con bị tai nạn, con đang ở bệnh viện, con cần chuyển gấp 20 triệu vào tài khoản này, con gửi số bác sĩ đây.",
+      "Anh/em ơi anh/em đang bị giữ ở đồn công an, chuyển tiền đóng phạt gấp cho anh/em vào tài khoản này.",
+      "Video call hiển thị hình mặt giống người thân, giọng nói quen thuộc, yêu cầu chuyển tiền ngay không kịp giải thích nhiều."
+    ],
+    "red_flags": [
+      "Yêu cầu chuyển tiền gấp, không cho thời gian kiểm tra lại.",
+      "Tài khoản nhận tiền là người lạ, không trùng với tên người thân.",
+      "Không liên lạc được lại bằng số điện thoại quen thuộc của người thân."
+    ],
+    "assistant_safe_response": "Trong mọi trường hợp, quý khách nên bình tĩnh, gọi lại vào số điện thoại quen thuộc của người thân hoặc liên hệ nhiều kênh khác để xác minh. Không chuyển tiền chỉ dựa trên một cuộc gọi hoặc video lạ, kể cả khi giọng nói/hình ảnh giống người thân."
+  },
+  {
+    "id": "scam_11",
+    "name": "Deepfake mạo danh cơ quan công an, viện kiểm sát, tòa án",
+    "category": "ai_deepfake_authority",
+    "channel": ["phone_call", "video_call"],
+    "attack_goal": ["steal_money_via_transfer", "install_malware"],
+    "risk_level": "high",
+    "description": "Đối tượng dùng deepfake để giả mạo công an, viện kiểm sát, tòa án, thông báo nạn nhân liên quan tới vụ án, sau đó yêu cầu chuyển tiền 'phục vụ điều tra' hoặc cài ứng dụng chứa mã độc.",
+    "script_examples": [
+      "Tôi là cán bộ công an, anh/chị đang liên quan đến đường dây rửa tiền, để chứng minh trong sạch, anh/chị chuyển tiền vào tài khoản tạm giữ để cơ quan kiểm tra.",
+      "Video call hiển thị người mặc đồng phục, yêu cầu anh/chị cài ứng dụng điều tra bí mật để theo dõi giao dịch.",
+      "Anh/chị không được báo cho ai, nếu không sẽ bị coi là đồng phạm."
+    ],
+    "red_flags": [
+      "Yêu cầu chuyển tiền vào tài khoản cá nhân để 'phục vụ điều tra'.",
+      "Cấm nạn nhân thông báo cho người khác hoặc luật sư.",
+      "Đề nghị cài đặt ứng dụng ngoài kho chính thức với lý do nghiệp vụ."
+    ],
+    "assistant_safe_response": "Cơ quan công an, tòa án không bao giờ yêu cầu người dân chuyển tiền vào tài khoản cá nhân để điều tra. Nếu nhận được cuộc gọi như vậy, quý khách nên ngắt máy và chủ động liên hệ trực tiếp cơ quan chức năng qua số công bố chính thức, hoặc đến trụ sở để xác minh."
+  },
+  {
+    "id": "scam_12",
+    "name": "Hồ sơ mạng xã hội giả, nuôi quan hệ dài hạn rồi lừa đầu tư",
+    "category": "ai_profile_investment",
+    "channel": ["social", "chat"],
+    "attack_goal": ["steal_money_via_investment"],
+    "risk_level": "medium",
+    "description": "Kẻ gian tạo profile mạng xã hội với ảnh AI hoặc deepfake, xây dựng mối quan hệ tình cảm/bạn bè trong thời gian dài, sau đó rủ đầu tư tài chính, tiền ảo, dự án 'liên kết ngân hàng' với lợi nhuận cao.",
+    "script_examples": [
+      "Sau vài tháng trò chuyện, đối tượng giới thiệu 'đội nhóm đầu tư', khoe ảnh chụp tại hội thảo ngân hàng.",
+      "Gửi ảnh phiếu chuyển tiền lợi nhuận, sao kê lãi cao, rủ tham gia gói từ 50 triệu trở lên.",
+      "Thuyết phục: 'Em làm trong ngân hàng nên biết kênh nội bộ, chỉ chia sẻ với người thân thiết'."
+    ],
+    "red_flags": [
+      "Tài khoản mạng xã hội mới, ít bạn thật, ảnh giống AI hoặc deepfake.",
+      "Luôn hứa lợi nhuận cao, ít rủi ro, gắn mác 'liên kết ngân hàng' nhưng không có chứng cứ.",
+      "Chỉ chấp nhận chuyển khoản vào tài khoản cá nhân."
+    ],
+    "assistant_safe_response": "Quý khách nên kiểm tra kỹ lai lịch đối tác, không tin vào các lời mời đầu tư trên mạng xã hội chỉ dựa vào hình ảnh và lời nói. Ngân hàng không cung cấp 'kênh nội bộ' cho cá nhân đầu tư riêng lẻ với lãi suất bất thường."
+  },
+  {
+    "id": "scam_13",
+    "name": "Mạo danh chương trình quà Tết, phúc lợi xã hội để dụ cài app giả",
+    "category": "fake_promo_app",
+    "channel": ["social", "sms", "web"],
+    "attack_goal": ["install_malware", "collect_personal_data"],
+    "risk_level": "medium",
+    "description": "Quảng cáo chương trình tặng quà Tết, hỗ trợ phúc lợi xã hội, trợ cấp, yêu cầu người dùng đăng ký qua link và cài app để nhận tiền/quà, thực chất là app giả chứa mã độc.",
+    "script_examples": [
+      "Chương trình hỗ trợ tiền mặt dịp Tết cho hộ khó khăn, tải app này để đăng ký nhận 3 triệu/người.",
+      "Ngân hàng phối hợp với cơ quan nhà nước tặng lì xì Tết, anh/chị cài app và điền thông tin để nhận.",
+      "Nhập số CMND/CCCD, số tài khoản và mật khẩu để hệ thống chuyển tiền hỗ trợ."
+    ],
+    "red_flags": [
+      "Chương trình không xuất hiện trên website chính thức của ngân hàng/cơ quan nhà nước.",
+      "Yêu cầu cài app từ link lạ thay vì kho ứng dụng.",
+      "Đòi nhập mật khẩu, OTP để 'nhận tiền hỗ trợ'."
+    ],
+    "assistant_safe_response": "Các chương trình hỗ trợ chính thống luôn được công bố trên website/app chính thức. Quý khách không nên cài app từ nguồn lạ hoặc nhập mật khẩu, OTP vào các form không thuộc ngân hàng/cơ quan nhà nước."
+  },
+  {
+    "id": "scam_14",
+    "name": "Quảng cáo vé máy bay, tour du lịch siêu rẻ rồi yêu cầu đặt cọc",
+    "category": "travel_deposit_scam",
+    "channel": ["social", "web", "chat"],
+    "attack_goal": ["steal_deposits"],
+    "risk_level": "medium",
+    "description": "Tài khoản giả mạo đại lý du lịch hoặc đối tác ngân hàng quảng cáo vé máy bay, tour du lịch giá cực rẻ, yêu cầu chuyển tiền đặt cọc vào tài khoản cá nhân, sau đó biến mất.",
+    "script_examples": [
+      "Combo vé máy bay + khách sạn Đà Nẵng chỉ 1.999.000 đồng, chuyển khoản giữ chỗ trong hôm nay.",
+      "Khuyến mãi độc quyền cho khách hàng ngân hàng, thanh toán trước 50% qua chuyển khoản để được giữ ưu đãi.",
+      "Sau khi nhận cọc sẽ gửi mã đặt chỗ, nhưng thực tế không có booking thật."
+    ],
+    "red_flags": [
+      "Giá rẻ bất thường so với thị trường.",
+      "Yêu cầu chuyển cọc vào tài khoản cá nhân, không phải công ty du lịch uy tín.",
+      "Không xuất hóa đơn, hợp đồng, mã đặt chỗ rõ ràng."
+    ],
+    "assistant_safe_response": "Quý khách nên đặt vé, tour qua các nền tảng uy tín hoặc website chính thức của hãng/đại lý. Không chuyển tiền đặt cọc cho tài khoản cá nhân khi chưa xác minh kỹ thông tin đơn vị cung cấp dịch vụ."
+  },
+  {
+    "id": "scam_15",
+    "name": "Việc làm online, nhiệm vụ nhận thưởng lãi cao có liên kết ngân hàng",
+    "category": "online_task_scam",
+    "channel": ["social", "chat"],
+    "attack_goal": ["steal_money_via_topup"],
+    "risk_level": "medium",
+    "description": "Đối tượng mời làm nhiệm vụ online như tăng tương tác, đặt hàng ảo, 'làm nhiệm vụ ngân hàng', yêu cầu người chơi nạp tiền để mở nhiệm vụ cấp cao, hứa hoàn cả gốc lẫn lãi nhưng sau đó khóa tài khoản.",
+    "script_examples": [
+      "Hoàn thành nhiệm vụ chuyển tiền thử, anh/chị sẽ nhận lại gốc + 10% từ hệ thống ngân hàng đối tác.",
+      "Muốn lên cấp nhiệm vụ, anh/chị nạp thêm 5 triệu vào ví để nhận thưởng 6 triệu.",
+      "Sau vài vòng nhiệm vụ hoàn tiền đúng, đến vòng cao thì mất toàn bộ số tiền."
+    ],
+    "red_flags": [
+      "Hứa hoàn lại 100% số tiền nạp + thưởng cao trong thời gian ngắn.",
+      "Không có giấy tờ xác nhận quan hệ với ngân hàng.",
+      "Sau khi nạn nhân nạp số tiền lớn thì tài khoản bị khóa, mất liên lạc."
+    ],
+    "assistant_safe_response": "Ngân hàng không cung cấp nhiệm vụ online dạng hoàn tiền lãi cao cho cá nhân. Quý khách nên tránh các chương trình yêu cầu nạp tiền nhiều vòng, chỉ dựa vào lời hứa của đối tượng trên mạng."
+  },
+  {
+    "id": "scam_16",
+    "name": "Tuyển dụng online giả mạo ngân hàng, chiếm dữ liệu và phí",
+    "category": "fake_job_recruitment",
+    "channel": ["social", "email", "chat"],
+    "attack_goal": ["collect_personal_data", "collect_fees"],
+    "risk_level": "medium",
+    "description": "Tin tuyển dụng mạo danh ngân hàng, hứa nhận vào làm nhanh, yêu cầu ứng viên cung cấp đầy đủ thông tin cá nhân, sao kê, rồi thu tiền 'phí hồ sơ', 'phí đào tạo'.",
+    "script_examples": [
+      "Anh/chị đã qua vòng sơ tuyển, chỉ cần đóng phí đào tạo 2 triệu là nhận việc chính thức tại ngân hàng.",
+      "Gửi toàn bộ thông tin cá nhân, sao kê lương, ảnh CCCD để hoàn tất hồ sơ tuyển.",
+      "Phí đồng phục, phí xét duyệt phải chuyển trước, sau này sẽ hoàn lại."
+    ],
+    "red_flags": [
+      "Kênh tuyển dụng không thuộc website chính thức hoặc fanpage được xác minh.",
+      "Thu phí tuyển dụng qua tài khoản cá nhân.",
+      "Thông tin vị trí, mô tả công việc mơ hồ, không rõ đơn vị phụ trách."
+    ],
+    "assistant_safe_response": "Quy trình tuyển dụng của ngân hàng luôn được thông báo qua kênh chính thức và không thu phí ứng viên. Quý khách không nên cung cấp toàn bộ dữ liệu cá nhân hoặc chuyển tiền cho các 'nhà tuyển dụng' không xác thực."
+  },
+  {
+    "id": "scam_17",
+    "name": "Giả mạo nhân viên giao hàng thu thêm phí hoặc tiền hàng",
+    "category": "delivery_fee_scam",
+    "channel": ["phone_call", "chat"],
+    "attack_goal": ["steal_small_payments"],
+    "risk_level": "low",
+    "description": "Đối tượng tự xưng là nhân viên giao hàng, báo phải thanh toán thêm phí hoặc chuyển khoản trước để nhận hàng, thực tế không có đơn hàng hoặc giá trị hàng hóa không tương xứng.",
+    "script_examples": [
+      "Anh/chị có đơn hàng đang giao, vui lòng chuyển thêm phí vận chuyển 50.000 vào tài khoản này.",
+      "Nếu không thanh toán trước phí thủ tục, đơn hàng sẽ bị hủy.",
+      "Hàng bị giữ tại kho, anh/chị đóng thêm tiền để được giao."
+    ],
+    "red_flags": [
+      "Người nhận không hề đặt đơn hàng tương ứng.",
+      "Yêu cầu chuyển khoản trước phí nhỏ.",
+      "Không cung cấp mã đơn hàng, tên đơn vị vận chuyển rõ ràng."
+    ],
+    "assistant_safe_response": "Quý khách nên kiểm tra lại mã đơn hàng trên ứng dụng mua sắm hoặc đơn vị vận chuyển chính thức. Không chuyển khoản cho người tự xưng giao hàng nếu không xác minh được thông tin."
+  },
+  {
+    "id": "scam_18",
+    "name": "Phishing qua QR giả, link thanh toán giả",
+    "category": "qr_phishing",
+    "channel": ["web", "social", "offline"],
+    "attack_goal": ["redirect_payment", "phishing_credentials"],
+    "risk_level": "medium",
+    "description": "Dán QR giả tại điểm thanh toán hoặc gửi link QR thanh toán, nạn nhân quét QR chuyển tiền tới tài khoản của kẻ gian hoặc bị dẫn tới trang đăng nhập giả.",
+    "script_examples": [
+      "QR thanh toán tại quầy bị thay bằng mã QR của đối tượng.",
+      "Gửi QR trên chat: 'Quét mã này để thanh toán đơn hàng ngân hàng ưu đãi'.",
+      "Sau khi quét, trang hiện form đăng nhập Internet Banking."
+    ],
+    "red_flags": [
+      "QR dán chồng lên QR cũ, không có thông tin đơn vị rõ ràng.",
+      "Trang mở ra sau khi quét yêu cầu đăng nhập tài khoản ngân hàng.",
+      "Không giống quy trình thanh toán chính thức của ngân hàng hoặc đơn vị cung cấp dịch vụ."
+    ],
+    "assistant_safe_response": "Quý khách chỉ nên sử dụng QR do ngân hàng hoặc đối tác uy tín cung cấp. Khi thanh toán tại điểm bán, hãy kiểm tra kỹ QR và thông tin người nhận trước khi xác nhận chuyển tiền."
+  },
+  {
+    "id": "scam_19",
+    "name": "Chiếm quyền thiết bị rồi thao tác thay nạn nhân",
+    "category": "remote_device_takeover",
+    "channel": ["phone_call", "app_malware"],
+    "attack_goal": ["takeover_device", "perform_fraudulent_transactions"],
+    "risk_level": "high",
+    "description": "Sau khi dụ nạn nhân cài app giả hoặc công cụ trợ giúp từ xa, kẻ gian chiếm quyền điều khiển thiết bị, tự đăng nhập app ngân hàng, chuyển tiền và che giấu dấu vết.",
+    "script_examples": [
+      "Nhân viên giả mạo hướng dẫn cài ứng dụng 'hỗ trợ từ xa' để xử lý lỗi tài khoản.",
+      "Yêu cầu cấp quyền trợ năng, ghi hình màn hình, truy cập toàn bộ nội dung.",
+      "Sau đó nạn nhân thấy thiết bị tự thao tác vào app ngân hàng."
+    ],
+    "red_flags": [
+      "Ứng dụng đòi quyền trợ năng mức cao, điều khiển thiết bị.",
+      "Thiết bị tự thao tác dù người dùng không chạm.",
+      "Phát sinh giao dịch lạ sau khi cài ứng dụng hỗ trợ."
+    ],
+    "assistant_safe_response": "Quý khách không nên cài ứng dụng cho phép người khác điều khiển thiết bị, trừ các ứng dụng chính thống được ngân hàng khuyến nghị. Nếu nghi ngờ bị chiếm quyền, hãy ngắt kết nối internet, gỡ app lạ và liên hệ ngay với ngân hàng."
+  },
+  {
+    "id": "scam_20",
+    "name": "Vishing dùng giọng nói sâu (AI) để vượt qua xác thực bằng giọng",
+    "category": "ai_voice_vishing",
+    "channel": ["phone_call"],
+    "attack_goal": ["bypass_voice_auth", "execute_high_value_transfers"],
+    "risk_level": "high",
+    "description": "Đối tượng dùng AI để clone giọng nói của chủ tài khoản hoặc người quản lý doanh nghiệp, gọi lên tổng đài ngân hàng để vượt qua xác thực bằng giọng nói và yêu cầu giao dịch giá trị lớn.",
+    "script_examples": [
+      "Cuộc gọi đến tổng đài với giọng giống hệt khách hàng, yêu cầu tăng hạn mức hoặc thực hiện chuyển khoản lớn.",
+      "Giả giọng CEO yêu cầu nhân viên ngân hàng xử lý gấp lệnh chuyển tiền liên ngân hàng.",
+      "Lặp lại câu xác thực được lưu trước đó để qua kiểm tra giọng."
+    ],
+    "red_flags": [
+      "Yêu cầu chuyển tiền gấp với lý do nội bộ nhưng thông tin đối chiếu khác thường.",
+      "Cuộc gọi từ số lạ nhưng giọng giống khách hàng.",
+      "Nội dung cuộc gọi không nhất quán với lịch sử giao dịch trước đó."
+    ],
+    "assistant_safe_response": "Các giao dịch giá trị lớn cần nhiều lớp xác thực, không chỉ dựa vào giọng nói. Ngân hàng sẽ yêu cầu xác minh thêm thông tin hoặc kênh liên lạc khác. Quý khách nên chủ động đăng ký các phương thức bảo mật mạnh (OTP, chữ ký số, xác thực đa yếu tố)."
+  },
+  {
+    "id": "scam_21",
+    "name": "Mạo danh mở tài khoản để làm 'money mule'",
+    "category": "money_mule_recruitment",
+    "channel": ["social", "chat"],
+    "attack_goal": ["use_account_for_fraud"],
+    "risk_level": "medium",
+    "description": "Đối tượng hứa trả hoa hồng cho người cho mượn tài khoản ngân hàng để 'nhận tiền hộ', thực chất dùng tài khoản đó làm trung gian rửa tiền hoặc nhận tiền lừa đảo.",
+    "script_examples": [
+      "Chỉ cần cho bên em mượn tài khoản để nhận tiền hộ vài lần, mỗi lần sẽ trả anh/chị hoa hồng.",
+      "Anh/chị không liên quan, chỉ cần rút tiền rồi gửi lại cho em là được.",
+      "Đề nghị mở mới tài khoản và gửi thông tin đăng nhập cho đối tượng."
+    ],
+    "red_flags": [
+      "Đề xuất sử dụng tài khoản của riêng nạn nhân để nhận tiền cho người lạ.",
+      "Hoa hồng cao nhưng không rõ mục đích nguồn tiền.",
+      "Yêu cầu cung cấp thông tin đăng nhập hoặc bỏ qua kiểm soát của chủ tài khoản."
+    ],
+    "assistant_safe_response": "Quý khách không nên cho người khác sử dụng tài khoản ngân hàng để nhận, rút hoặc chuyển tiền hộ. Hành vi này có thể khiến quý khách trở thành mắt xích trong đường dây rửa tiền hoặc lừa đảo, chịu trách nhiệm pháp lý."
+  },
+  {
+    "id": "scam_22",
+    "name": "Lợi dụng open banking / liên kết ví để ép nạn nhân cấp quyền",
+    "category": "open_banking_abuse",
+    "channel": ["web", "app"],
+    "attack_goal": ["get_third_party_access", "initiate_authorised_push_payments"],
+    "risk_level": "medium",
+    "description": "Đối tượng lập dịch vụ giả mạo, dụ nạn nhân cấp quyền truy cập tài khoản qua tính năng liên kết ví/open banking, từ đó thực hiện lệnh chuyển tiền được 'ủy quyền'.",
+    "script_examples": [
+      "Dịch vụ quản lý tài chính cá nhân yêu cầu liên kết tài khoản ngân hàng để tự động tối ưu chi tiêu.",
+      "Ứng dụng đầu tư tự động đề nghị cấp quyền trích tiền định kỳ để đầu tư.",
+      "Sau khi liên kết, dịch vụ thực hiện lệnh chuyển tiền mà nạn nhân không kiểm soát rõ."
+    ],
+    "red_flags": [
+      "Dịch vụ không rõ đơn vị đứng sau, không được ngân hàng công bố là đối tác.",
+      "Giao diện liên kết yêu cầu cấp quyền rộng hơn mức cần thiết.",
+      "Nạn nhân không hiểu rõ nội dung các quyền được cấp."
+    ],
+    "assistant_safe_response": "Quý khách chỉ nên liên kết tài khoản với các dịch vụ uy tín được ngân hàng hoặc tổ chức quản lý công bố. Trước khi cấp quyền, hãy đọc kỹ điều khoản và phạm vi sử dụng dữ liệu, hạn chế cấp quyền trích tiền tự động nếu không thực sự cần."
+  },
+  {
+    "id": "scam_23",
+    "name": "Lừa nạn nhân nhập thông tin thẻ vào trang thanh toán giả",
+    "category": "card_phishing",
+    "channel": ["web", "social"],
+    "attack_goal": ["steal_card_data"],
+    "risk_level": "high",
+    "description": "Trang thanh toán giả mạo cổng thanh toán hoặc trang ngân hàng, yêu cầu nhập số thẻ, CVV, ngày hết hạn, OTP để 'thanh toán' nhưng thực tế là thu thập dữ liệu thẻ.",
+    "script_examples": [
+      "Giỏ hàng yêu cầu nhập lại toàn bộ thông tin thẻ dù đã lưu trước đó.",
+      "Hiển thị logo ngân hàng nhưng tên miền thuộc bên thứ ba không xác định.",
+      "Sau khi nhập xong thông tin, không có xác nhận đơn hàng rõ ràng."
+    ],
+    "red_flags": [
+      "Trang thanh toán không thuộc tên miền uy tín hoặc đối tác rõ ràng.",
+      "Yêu cầu nhập CVV, OTP nhiều lần.",
+      "Không có thông tin hỗ trợ, liên hệ."
+    ],
+    "assistant_safe_response": "Quý khách chỉ nên thanh toán qua các cổng thanh toán, website thương mại điện tử và ứng dụng chính thống. Không nhập thông tin thẻ trên các trang web lạ, không rõ nguồn gốc."
+  },
+  {
+    "id": "scam_24",
+    "name": "Lợi dụng check/deposit fraud trên tài khoản séc/tiền gửi",
+    "category": "cheque_deposit_fraud",
+    "channel": ["branch", "atm", "app"],
+    "attack_goal": ["steal_funds_via_fake_deposits"],
+    "risk_level": "medium",
+    "description": "Đối tượng gửi séc hoặc chứng từ giả, sau đó lợi dụng thời gian treo, yêu cầu rút/huy động tiền hoặc hoàn trả, dẫn đến thiệt hại trên tài khoản.",
+    "script_examples": [
+      "Gửi chứng từ trông giống séc thật vào tài khoản của nạn nhân rồi đề nghị sử dụng hoặc chia phần.",
+      "Thúc ép nạn nhân rút tiền khi số dư chưa thực sự được ngân hàng xác nhận.",
+      "Hứa chia lợi nhuận nếu cho mượn tài khoản để nhận séc."
+    ],
+    "red_flags": [
+      "Chứng từ không rõ nguồn gốc, không xác minh được người phát hành.",
+      "Đề nghị rút tiền ngay khi chứng từ mới nộp.",
+      "Nạn nhân không hiểu rõ quy trình xử lý séc/chứng từ."
+    ],
+    "assistant_safe_response": "Quý khách nên chờ ngân hàng xác nhận rõ tình trạng chứng từ trước khi sử dụng số tiền liên quan. Không cho người khác mượn tài khoản để nhận séc hoặc chứng từ lạ."
+  },
+  {
+    "id": "scam_25",
+    "name": "APP fraud – lừa nạn nhân tự chuyển tiền (Authorised Push Payment)",
+    "category": "authorised_push_payment_scam",
+    "channel": ["phone_call", "social"],
+    "attack_goal": ["coerce_victim_to_transfer"],
+    "risk_level": "high",
+    "description": "Thay vì hack tài khoản, đối tượng dùng social engineering để thuyết phục nạn nhân tự đăng nhập và chuyển tiền đến tài khoản scam, thường gắn với đầu tư, hỗ trợ, bảo vệ tài khoản.",
+    "script_examples": [
+      "Nhân viên giả mạo ngân hàng hướng dẫn nạn nhân chuyển tiền sang tài khoản 'an toàn' để tránh bị hack.",
+      "Đối tượng mời đầu tư, hướng dẫn từng bước chuyển tiền trên app ngân hàng, trấn an rằng sẽ hoàn lại gốc lẫn lãi.",
+      "Dùng ngôn từ thân thiện, giải thích chi tiết các bước, khiến nạn nhân tin là thao tác hợp lệ."
+    ],
+    "red_flags": [
+      "Nạn nhân tự thao tác chuyển tiền dưới sự hướng dẫn của người lạ.",
+      "Mục đích chuyển tiền không rõ ràng, chỉ dựa trên lời hứa.",
+      "Đối tượng cố thuyết phục rằng 'ngân hàng cho phép' hoặc 'đây là tài khoản an toàn'."
+    ],
+    "assistant_safe_response": "Quý khách chỉ nên chuyển tiền khi hiểu rõ mục đích, bên nhận và rủi ro. Không làm theo hướng dẫn của người lạ qua điện thoại/mạng xã hội để chuyển tiền 'bảo vệ tài khoản' hoặc 'đầu tư lãi cao'."
+  }
+]

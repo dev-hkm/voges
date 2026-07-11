@@ -2,10 +2,12 @@ import { Component, memo } from 'react';
 import {
   ArrowRight,
   BadgeCheck,
+  Check,
   CreditCard,
   Landmark,
   ReceiptText,
   ShieldCheck,
+  ShieldAlert,
   Ticket,
   Wallet,
 } from 'lucide-react';
@@ -218,6 +220,43 @@ function SecurityResultCard({ card }) {
   );
 }
 
+function ResolutionPlanCard({ card, onAction }) {
+  const data = card.data;
+  return (
+    <CardShell icon={<ShieldCheck size={18} />} title={card.title} subtitle={card.subtitle} actions={card.actions} onAction={onAction}>
+      <div className="resolution-problem"><span>Problem</span><strong>{data.problem}</strong></div>
+      <div className="resolution-section"><span>Root cause</span>{data.root_causes.map((cause) => <div className="resolution-row" key={cause.code}><strong>{cause.label}</strong><small>{cause.detail}</small></div>)}</div>
+      <div className="resolution-section"><span>Resolution plan</span>{data.steps.map((step) => <div className="resolution-row" key={step.id}><strong>{step.title}<em className={`risk-${step.risk_level}`}>{step.risk_level}</em></strong><small>{step.estimated_effect}</small></div>)}</div>
+      <div className={`resolution-outcome ${data.readiness_status === 'ready_after_plan' ? 'is-ready' : 'is-blocked'}`}><span>Expected result</span><strong>{data.expected_result}</strong>{data.blockers.map((blocker) => <small key={blocker}>{blocker}</small>)}</div>
+      {data.requires_biometric ? <p className="resolution-security">One plan approval. Device verification required.</p> : null}
+    </CardShell>
+  );
+}
+
+function ResolutionCompleteCard({ card }) {
+  const data = card.data;
+  return (
+    <CardShell icon={<Check size={18} />} title={card.title} subtitle={card.subtitle}>
+      <div className="resolution-problem"><span>Problem</span><strong>{data.problem}</strong></div>
+      <div className="resolution-section"><span>Completed</span>{data.completed_steps.map((step) => <div className="resolution-row" key={step}><strong>{step}</strong><small>Completed and audited</small></div>)}</div>
+      <div className={`resolution-outcome ${data.readiness_status === 'ready_after_plan' ? 'is-ready' : 'is-blocked'}`}><span>Readiness</span><strong>{data.readiness_status === 'ready_after_plan' ? 'Ready to retry payment' : 'Still blocked'}</strong>{data.blockers.map((blocker) => <small key={blocker}>{blocker}</small>)}</div>
+      <p className="resolution-security">{data.verification}</p>
+    </CardShell>
+  );
+}
+
+function ScamRiskCard({ card }) {
+  const data = card.data;
+  return (
+    <CardShell icon={<ShieldAlert size={18} />} title={card.title} subtitle={card.subtitle}>
+      <div className="scam-risk-level"><span>Scam risk</span><strong>{data.risk_level}</strong></div>
+      <div className="resolution-section"><span>Matched patterns</span>{data.matched_patterns.map((pattern) => <div className="resolution-row" key={pattern.id}><strong>{pattern.name}</strong>{pattern.red_flags.map((flag) => <small key={flag}>{flag}</small>)}</div>)}</div>
+      <div className="resolution-outcome is-blocked"><span>Recommendation</span><strong>{data.recommendation}</strong></div>
+      {data.verification_questions.length ? <div className="resolution-section"><span>Before you continue</span>{data.verification_questions.map((question) => <small className="scam-question" key={question}>{question}</small>)}</div> : null}
+    </CardShell>
+  );
+}
+
 function SessionSummaryCard({ card }) {
   return (
     <CardShell icon={<Landmark size={18} />} title={card.title} subtitle={card.subtitle}>
@@ -255,6 +294,9 @@ const CARD_COMPONENTS = {
   pending_action: PendingActionCard,
   support_ticket: SupportTicketCard,
   security_result: SecurityResultCard,
+  resolution_plan: ResolutionPlanCard,
+  resolution_complete: ResolutionCompleteCard,
+  scam_risk: ScamRiskCard,
   session_summary: SessionSummaryCard,
   generic_info: GenericInfoCard,
 };

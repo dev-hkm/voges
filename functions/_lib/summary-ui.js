@@ -271,6 +271,17 @@ export function buildSupportTicketSummary(ticket) {
 }
 
 export function buildSecurityResultSummary({ action, result, auditReference }) {
+  const after = result?.after || null;
+  const completedTool = result?.action || action?.tool_name;
+  const actionResult = ['freezeCard', 'unfreezeCard'].includes(completedTool) && after?.status
+    ? `Card status is now ${after.status}`
+    : ['enableOnlinePayments', 'disableOnlinePayments'].includes(completedTool) && typeof after?.online_payment_enabled === 'number'
+      ? `Online payments are now ${after.online_payment_enabled ? 'enabled' : 'disabled'}`
+    : ['enableInternationalPayments', 'disableInternationalPayments'].includes(completedTool) && typeof after?.international_payment_enabled === 'number'
+      ? `International payments are now ${after.international_payment_enabled ? 'enabled' : 'disabled'}`
+      : after?.status
+      ? `Card status is now ${after.status}`
+      : result?.action || action?.tool_name || 'Completed';
   return validateSummaryCard({
     type: 'security_result',
     title: 'Security result',
@@ -278,11 +289,66 @@ export function buildSecurityResultSummary({ action, result, auditReference }) {
     data: {
       verification_result: 'Verified',
       device_authentication_status: 'Passkey confirmed',
-      action_result: result?.action || action?.tool_name || 'Completed',
+      action_result: actionResult,
       timestamp: now(),
       audit_reference: String(auditReference || id()).slice(0, 8),
     },
     actions: [],
     metadata: { action_id: action?.id || null },
+  });
+}
+
+export function buildResolutionPlanSummary(plan, pendingAction) {
+  return validateSummaryCard({
+    type: 'resolution_plan',
+    title: 'Resolution Autopilot',
+    subtitle: pendingAction ? 'A bounded plan is ready for your review' : 'Investigation complete',
+    data: {
+      plan_id: plan.id,
+      problem: plan.problem,
+      root_causes: plan.root_causes,
+      steps: plan.steps.map((step) => ({ id: step.id, title: step.title, description: step.description, risk_level: step.risk_level, estimated_effect: step.estimated_effect, status: step.read_only ? 'verification' : 'planned' })),
+      expected_result: plan.expected_result,
+      readiness_status: plan.readiness_check.status,
+      blockers: plan.readiness_check.blockers || [],
+      requires_biometric: Boolean(pendingAction?.requires_biometric),
+      estimated_risk: plan.estimated_risk,
+    },
+    actions: pendingAction ? [{ label: 'Review and approve plan', action: 'resolution:review', variant: 'primary', payload: { pending_action_id: pendingAction.id } }] : [],
+    metadata: { plan_id: plan.id, pending_action_id: pendingAction?.id || null, plan_hash: plan.plan_hash },
+  });
+}
+
+export function buildResolutionCompleteSummary(resolution) {
+  const readiness = resolution.readiness_check || { status: 'blocked', blockers: ['Readiness check was unavailable.'] };
+  return validateSummaryCard({
+    type: 'resolution_complete',
+    title: readiness.status === 'ready_after_plan' ? 'Resolution complete' : 'Resolution needs follow-up',
+    subtitle: 'The approved plan has finished',
+    data: {
+      problem: resolution.problem || 'Payment issue',
+      completed_steps: (resolution.steps || []).filter((step) => step.status === 'completed').map((step) => step.title),
+      readiness_status: readiness.status,
+      blockers: readiness.blockers || [],
+      verification: 'Device authenticated and plan contract verified',
+    },
+    actions: [],
+    metadata: { plan_id: resolution.id || null, plan_hash: resolution.plan_hash || null },
+  });
+}
+
+export function buildScamRiskSummary(assessment) {
+  return validateSummaryCard({
+    type: 'scam_risk',
+    title: 'Scam risk advisory',
+    subtitle: 'High-risk signals detected — this is not a final conclusion',
+    data: {
+      risk_level: assessment.level,
+      matched_patterns: assessment.matched_patterns.map((item) => ({ id: item.id, name: item.name, red_flags: item.red_flags || [] })),
+      recommendation: assessment.recommendation,
+      verification_questions: assessment.verification_questions || [],
+    },
+    actions: [],
+    metadata: { source: 'sample_data/luadao.json.txt', advisory: true },
   });
 }
