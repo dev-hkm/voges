@@ -24,7 +24,6 @@ import {
   Sun,
   Terminal,
   Trash2,
-  Volume2,
   X,
 } from 'lucide-react';
 import { ACTION_TOOL_NAMES, BANKING_TOOLS, SUGGESTED_ACTIONS, TOOL_LABELS } from './banking';
@@ -520,6 +519,27 @@ const ApprovalSheet = memo(function ApprovalSheet({ action, actionBusy, customer
   );
 });
 
+const SummaryModal = memo(function SummaryModal({ open, cards, loading, error, onAction, onClose }) {
+  if (!open) return null;
+
+  return (
+    <div className="summary-modal-backdrop" role="dialog" aria-modal="true" aria-label="Banking insight">
+      <section className="summary-modal-card">
+        <div className="summary-modal-head">
+          <div>
+            <span className="eyebrow">Voges insight</span>
+            <h2>Here is what I found</h2>
+          </div>
+          <IconButton label="Close banking insight" onClick={onClose}>
+            <X size={18} />
+          </IconButton>
+        </div>
+        <SummaryCardDeck cards={cards} loading={loading} error={error} onAction={onAction} />
+      </section>
+    </div>
+  );
+});
+
 const SettingsDrawer = memo(function SettingsDrawer({
   open,
   data,
@@ -536,7 +556,8 @@ const SettingsDrawer = memo(function SettingsDrawer({
   const isDark = theme === 'dark';
 
   return (
-    <div className="settings-drawer" role="dialog" aria-modal="true" aria-label="Settings and security">
+    <div className="settings-backdrop" role="dialog" aria-modal="true" aria-label="Settings and security">
+      <section className="settings-drawer">
       <div className="settings-head">
         <div>
           <span className="eyebrow">Settings &amp; Safety</span>
@@ -648,6 +669,7 @@ const SettingsDrawer = memo(function SettingsDrawer({
           ))}
         </div>
       </section>
+      </section>
     </div>
   );
 });
@@ -667,6 +689,7 @@ function App() {
   const [diagLogs, setDiagLogs] = useState(diagBuffer.slice());
   const [diagOpen, setDiagOpen] = useState(false);
   const [summaryCards, setSummaryCards] = useState([]);
+  const [summaryModalOpen, setSummaryModalOpen] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState('');
   const [customerContext, setCustomerContext] = useState(null);
@@ -685,6 +708,12 @@ function App() {
   const [liveAssistantTurn, setLiveAssistantTurn] = useState(null);
   const [successState, setSuccessState] = useState(null);
   const [lastRealtimeEvent, setLastRealtimeEvent] = useState('idle');
+
+  useEffect(() => {
+    const modalOpen = summaryModalOpen || Boolean(pendingAction) || settingsOpen || historyOpen || diagOpen;
+    document.body.classList.toggle('modal-open', modalOpen);
+    return () => document.body.classList.remove('modal-open');
+  }, [diagOpen, historyOpen, pendingAction, settingsOpen, summaryModalOpen]);
 
   const peerRef = useRef(null);
   const channelRef = useRef(null);
@@ -844,6 +873,7 @@ function App() {
   const pushSummaryCard = useCallback((card) => {
     if (!card) return;
     setSummaryCards((current) => [card, ...current.filter((item) => JSON.stringify(item) !== JSON.stringify(card))].slice(0, 6));
+    setSummaryModalOpen(true);
     setSummaryLoading(false);
     setSummaryError('');
   }, []);
@@ -1128,6 +1158,7 @@ function App() {
     pushTimeline('Preparing response', '', 'processing');
     setSummaryLoading(true);
     setSummaryError('');
+    setSummaryModalOpen(true);
     sendEvent({
       type: 'conversation.item.create',
       item: {
@@ -1174,6 +1205,7 @@ function App() {
       finalizeTimelineStep('completed');
 
       if (isAction && payload.pending_action) {
+        setSummaryModalOpen(false);
         setPendingAction(payload.pending_action);
         pushTimeline('Awaiting approval', payload.pending_action.display_title, 'processing');
       } else {
@@ -1733,12 +1765,14 @@ function App() {
     setError('');
     setFatalError('');
     setSummaryCards([]);
+    setSummaryModalOpen(false);
     setSummaryError('');
     setSummaryLoading(false);
     setSuccessState(null);
   }, []);
 
   const handleSummaryAction = useCallback((action) => {
+    setSummaryModalOpen(false);
     if (!action?.action) return;
     if (action.action === 'voice:explain_transaction') {
       sendUserText('Explain the most recent transaction.', 'Summary action');
@@ -1887,13 +1921,6 @@ function App() {
               )}
             </section>
 
-            <SummaryCardDeck
-              cards={summaryCards}
-              loading={summaryLoading}
-              error={summaryError}
-              onAction={handleSummaryAction}
-            />
-
             {emptyStateVisible && (
               <section className="quick-actions" aria-label="Suggested banking actions">
                 {SUGGESTED_ACTIONS.map((action) => (
@@ -1905,13 +1932,6 @@ function App() {
               </section>
             )}
 
-            <div className="footer-note footer-note-centered">
-              <Volume2 size={13} />
-              Secure voice only. On-screen transcripts are hidden for a cleaner experience.
-              <span className="build-tag" title="If you see this tag change after a deploy, the new build is live.">
-                {BUILD_TAG}
-              </span>
-            </div>
           </div>
         </div>
 
@@ -1944,14 +1964,16 @@ function App() {
             window.location.reload();
           }}
         />
-        <RealtimeHealthBar
-          build={BUILD_TAG}
-          connected={connected}
-          connecting={connecting}
-          lastEvent={lastRealtimeEvent}
-          fatalError={fatalError}
-          logs={diagLogs}
-          onOpen={() => setDiagOpen(true)}
+        <SummaryModal
+          open={summaryModalOpen && !pendingAction}
+          cards={summaryCards}
+          loading={summaryLoading}
+          error={summaryError}
+          onAction={(action) => {
+            setSummaryModalOpen(false);
+            handleSummaryAction(action);
+          }}
+          onClose={() => setSummaryModalOpen(false)}
         />
         <ApprovalSheet
           action={pendingAction}

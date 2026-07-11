@@ -1813,22 +1813,108 @@ input:focus-visible {
 .approval-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 20;
-  background: rgba(6, 8, 12, 0.48);
+  z-index: 10020;
+  background: rgba(5, 7, 11, 0.78);
+  backdrop-filter: blur(18px);
   display: flex;
   justify-content: center;
   align-items: flex-end;
   padding: 18px;
+  overflow: auto;
 }
 
 .approval-sheet {
   width: min(640px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
   padding: 16px 18px 18px;
   border: 1px solid var(--line);
   border-radius: 26px 26px 18px 18px;
   background: linear-gradient(180deg, var(--surface-strong), var(--surface));
   box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.24);
   animation: sheet-in 0.26s ease-out;
+}
+
+body.modal-open {
+  overflow: hidden;
+}
+
+.summary-modal-backdrop,
+.settings-backdrop,
+.history-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10010;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(5, 7, 11, 0.78);
+  backdrop-filter: blur(18px);
+  overflow: auto;
+}
+
+.summary-modal-card {
+  width: min(760px, 100%);
+  max-height: min(820px, calc(100dvh - 32px));
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  background: linear-gradient(180deg, var(--surface-strong), var(--surface));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+  animation: modal-in 0.24s ease-out;
+}
+
+.summary-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.summary-modal-head h2 {
+  margin: 8px 0 0;
+  font-size: clamp(22px, 4vw, 32px);
+}
+
+.summary-modal-card .summary-card-deck {
+  width: 100%;
+  margin-top: 18px;
+}
+
+.settings-backdrop .settings-drawer,
+.history-backdrop .history-drawer {
+  position: relative;
+  inset: auto;
+  right: auto;
+  top: auto;
+  bottom: auto;
+  width: min(1080px, 100%);
+  max-height: calc(100dvh - 32px);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: 22px;
+  overflow: auto;
+  animation: modal-in 0.24s ease-out;
+}
+
+.settings-backdrop .settings-drawer {
+  width: min(620px, 100%);
+}
+
+.sheet-actions button {
+  min-height: 48px;
+  cursor: pointer;
+}
+
+.sheet-actions button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .sheet-handle {
@@ -2289,5 +2375,35 @@ input:focus-visible {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .summary-modal-backdrop,
+  .settings-backdrop,
+  .history-backdrop,
+  .approval-backdrop {
+    padding: 10px;
+    align-items: end;
+  }
+
+  .summary-modal-card,
+  .settings-backdrop .settings-drawer,
+  .history-backdrop .history-drawer,
+  .approval-sheet {
+    max-height: calc(100dvh - 20px);
+    border-radius: 22px 22px 14px 14px;
+    padding: 16px;
+  }
+
+  .approval-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sheet-actions {
+    position: sticky;
+    bottom: 0;
+    padding-top: 12px;
+    background: linear-gradient(180deg, transparent, var(--surface-strong) 30%);
   }
 }

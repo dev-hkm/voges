@@ -76,7 +76,8 @@ export const HistoryDrawer = memo(function HistoryDrawer({
   if (!open) return null;
 
   return (
-    <div className="history-drawer" role="dialog" aria-modal="true" aria-label="Conversation history">
+    <div className="history-backdrop" role="dialog" aria-modal="true" aria-label="Conversation history">
+      <section className="history-drawer">
       <div className="history-drawer-head">
         <div>
           <span className="eyebrow">History</span>
@@ -197,6 +198,7 @@ export const HistoryDrawer = memo(function HistoryDrawer({
           ) : null}
         </section>
       </div>
+      </section>
     </div>
   );
 });
