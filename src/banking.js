@@ -14,11 +14,46 @@ export const BANKING_TOOLS = [
 ];
 
 export const SUGGESTED_ACTIONS = [
-  { label: 'Why was my card declined?', prompt: 'Why was my Netflix payment declined?' },
-  { label: 'Check my KYC status', prompt: 'Can you check my KYC status?' },
-  { label: 'Show recent transactions', prompt: 'Show me my recent transactions.' },
-  { label: 'Help me fund my account', prompt: 'How can I fund my account?' },
-  { label: 'Create support ticket', prompt: 'I need help creating a support ticket.' },
+  {
+    label: 'Why was my card declined?',
+    prompt: 'Why was my Netflix payment declined?',
+    group: 'Card',
+    intent: 'Decline analysis',
+    proof: 'Reads transactions and card controls',
+    risk: 'Low',
+  },
+  {
+    label: 'Show recent transactions',
+    prompt: 'Show me my recent transactions.',
+    group: 'Transactions',
+    intent: 'Account activity',
+    proof: 'Opens a banking insight modal',
+    risk: 'Low',
+  },
+  {
+    label: 'Check my KYC status',
+    prompt: 'Can you check my KYC status?',
+    group: 'Identity',
+    intent: 'KYC review',
+    proof: 'Reads verified customer data',
+    risk: 'Low',
+  },
+  {
+    label: 'Enable online payments',
+    prompt: 'Enable online payments for my card.',
+    group: 'Security action',
+    intent: 'Payment control change',
+    proof: 'Requires policy, approval, passkey',
+    risk: 'Medium',
+  },
+  {
+    label: 'Create support ticket',
+    prompt: 'I need help creating a support ticket.',
+    group: 'Support',
+    intent: 'Case creation',
+    proof: 'Creates a pending action first',
+    risk: 'Medium',
+  },
 ];
 
 export const TOOL_LABELS = {

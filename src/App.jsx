@@ -411,7 +411,7 @@ const Timeline = memo(function Timeline({ items }) {
 
   return (
     <section className="conversation-timeline" aria-label="Conversation timeline">
-      <span className="section-label">Conversation timeline</span>
+      <span className="section-label">AI activity</span>
       <div className="timeline-list">
         {items.map((item) => (
           <div className={`timeline-item is-${item.state}`} key={item.id}>
@@ -424,6 +424,71 @@ const Timeline = memo(function Timeline({ items }) {
             </div>
           </div>
         ))}
+      </div>
+    </section>
+  );
+});
+
+const DemoProofPanel = memo(function DemoProofPanel({ customerContext, timeline, pendingAction, connected, onOpenSecurity }) {
+  const primaryCard = customerContext?.cards?.[0];
+  const account = customerContext?.accounts?.[0];
+  const recentTimeline = timeline.slice(-4);
+
+  return (
+    <section className="demo-proof-panel" aria-label="Banking safety proof">
+      <div className="proof-card proof-card-primary">
+        <div className="proof-card-head">
+          <ShieldCheck size={17} />
+          <span>Safety layer</span>
+        </div>
+        <strong>{pendingAction ? 'Approval is waiting on screen' : 'Policy checks are active'}</strong>
+        <p>
+          Every write action is reviewed by backend policy before approval, passkey verification, execution, and audit.
+        </p>
+        <button type="button" onClick={onOpenSecurity}>
+          View Security & Policies
+        </button>
+      </div>
+
+      <div className="proof-card">
+        <div className="proof-card-head">
+          <Landmark size={17} />
+          <span>Customer context</span>
+        </div>
+        <div className="proof-kv">
+          <span>Account</span>
+          <strong>{account?.status || customerContext?.customer?.account_status || 'Ready'}</strong>
+        </div>
+        <div className="proof-kv">
+          <span>Card</span>
+          <strong>{primaryCard ? `${primaryCard.masked_number} · ${primaryCard.status}` : 'Loaded on demand'}</strong>
+        </div>
+        <div className="proof-kv">
+          <span>KYC</span>
+          <strong>{customerContext?.kyc?.status || customerContext?.customer?.kyc_status || 'Available'}</strong>
+        </div>
+      </div>
+
+      <div className="proof-card">
+        <div className="proof-card-head">
+          <Activity size={17} />
+          <span>Live process</span>
+        </div>
+        {recentTimeline.length ? (
+          <div className="proof-timeline">
+            {recentTimeline.map((item) => (
+              <div key={item.id} className={`proof-step is-${item.state}`}>
+                <span />
+                <div>
+                  <strong>{item.label}</strong>
+                  {item.detail && <small>{item.detail}</small>}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p>{connected ? 'Listening for the next banking request.' : 'Start voice, then ask a banking question.'}</p>
+        )}
       </div>
     </section>
   );
@@ -600,18 +665,47 @@ const SettingsDrawer = memo(function SettingsDrawer({
   if (!open) return null;
 
   const isDark = theme === 'dark';
+  const policyCount = data?.policy_rules?.length || 0;
+  const toolCount = data?.tool_permissions?.length || 0;
+  const passkeyCount = data?.passkeys?.length || 0;
+  const pendingCount = data?.pending_actions?.length || 0;
+  const auditCount = data?.audit?.length || 0;
 
   return (
     <div className="settings-backdrop" role="dialog" aria-modal="true" aria-label="Settings and security">
       <section className="settings-drawer">
       <div className="settings-head">
         <div>
-          <span className="eyebrow">Settings &amp; Safety</span>
-          <h2>Safety layer</h2>
+          <span className="eyebrow">Judge view</span>
+          <h2>Security &amp; Policies</h2>
+          <p>Backend policy, pending actions, passkeys, and audit logs behind the voice experience.</p>
         </div>
         <IconButton label="Close settings" onClick={onClose}>
           <X size={18} />
         </IconButton>
+      </div>
+
+      <div className="security-proof-grid">
+        <div>
+          <span>Policy rules</span>
+          <strong>{policyCount}</strong>
+        </div>
+        <div>
+          <span>Tool permissions</span>
+          <strong>{toolCount}</strong>
+        </div>
+        <div>
+          <span>Passkeys</span>
+          <strong>{passkeyCount}</strong>
+        </div>
+        <div>
+          <span>Pending actions</span>
+          <strong>{pendingCount}</strong>
+        </div>
+        <div>
+          <span>Audit events</span>
+          <strong>{auditCount}</strong>
+        </div>
       </div>
 
       <section className="settings-section">
@@ -698,6 +792,41 @@ const SettingsDrawer = memo(function SettingsDrawer({
               <small>{tool.riskLevel} · {tool.requiresBiometric ? 'passkey required' : 'confirmation'}</small>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-title">
+          <ShieldCheck size={16} />
+          <strong>Policy rules</strong>
+        </div>
+        <div className="settings-list">
+          {data?.policy_rules?.slice(0, 8).map((rule) => (
+            <div key={rule.code}>
+              <span>{rule.code}</span>
+              <small>{rule.rule_description || rule.enforcement_level}</small>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-title">
+          <Clock3 size={16} />
+          <strong>Pending actions</strong>
+        </div>
+        <div className="settings-list">
+          {data?.pending_actions?.length ? data.pending_actions.slice(0, 6).map((item) => (
+            <div key={item.id}>
+              <span>{item.display_title}</span>
+              <small>{item.risk_level} · {item.status}</small>
+            </div>
+          )) : (
+            <div>
+              <span>No pending approval</span>
+              <small>Write actions appear here before execution.</small>
+            </div>
+          )}
         </div>
       </section>
 
@@ -1915,7 +2044,7 @@ function App() {
               <Plus size={18} />
             </IconButton>
             <IconButton
-              label="Settings & Safety"
+              label="Security & Policies"
               onClick={() => {
                 setSettingsOpen(true);
                 loadSecurity();
@@ -2017,13 +2146,32 @@ function App() {
             {emptyStateVisible && (
               <section className="quick-actions" aria-label="Suggested banking actions">
                 {SUGGESTED_ACTIONS.map((action) => (
-                  <button key={action.label} onClick={() => useSuggestedAction(action.prompt)} type="button">
-                    <Banknote size={15} />
-                    <span>{action.label}</span>
+                  <button className="quick-action-card" key={action.label} onClick={() => useSuggestedAction(action.prompt)} type="button">
+                    <span className="quick-action-topline">
+                      <span>{action.group}</span>
+                      <small className={`quick-risk risk-${String(action.risk || 'low').toLowerCase()}`}>{action.risk}</small>
+                    </span>
+                    <span className="quick-action-title">
+                      <Banknote size={15} />
+                      <strong>{action.label}</strong>
+                    </span>
+                    <small>{action.intent}</small>
+                    <em>{action.proof}</em>
                   </button>
                 ))}
               </section>
             )}
+
+            <DemoProofPanel
+              customerContext={customerContext}
+              timeline={timeline}
+              pendingAction={pendingAction}
+              connected={connected}
+              onOpenSecurity={() => {
+                setSettingsOpen(true);
+                loadSecurity();
+              }}
+            />
 
           </div>
         </div>
