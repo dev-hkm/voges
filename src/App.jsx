@@ -1219,22 +1219,6 @@ function App() {
     setSummaryError('');
   }, []);
 
-  const evaluateScamRisk = useCallback(async (userRequest) => {
-    if (!userRequest?.trim()) return;
-    try {
-      const result = await api('/api/scam/evaluate', {
-        method: 'POST',
-        body: JSON.stringify({ user_request: userRequest, session_id: currentSessionIdRef.current }),
-      });
-      if (result.ui) {
-        pushSummaryCard(result.ui);
-        requestVoiceResponse(`A deterministic Scam Risk Advisor found high-risk signals in the customer's latest request. Do not state that it is definitely a scam. Briefly explain the matched concerns, ask one verification question, and give the safe recommendation from this verified result: ${JSON.stringify(result.data)}`, { priority: true, reason: 'scam_risk_advisory' });
-      }
-    } catch {
-      // Advisory evaluation must never interrupt the voice or banking core.
-    }
-  }, [api, pushSummaryCard, requestVoiceResponse]);
-
   const finalizeHistorySession = useCallback((finalOutcome = '') => {
     const sessionId = currentSessionIdRef.current;
     if (!sessionId || sessionFinalizedRef.current) return;
@@ -1367,10 +1351,18 @@ function App() {
       // browser-owned HTMLAudioElement and is never routed through AudioContext.
       const speaker = getLevel(speakerAnalyserRef.current);
 
-      if (timestamp - lastLevelPushRef.current > 66) {
+      // Keep the analyser smooth without forcing the complete React UI to
+      // repaint at audio-frame speed. This avoids mobile compositor flashing.
+      if (timestamp - lastLevelPushRef.current > 120) {
         lastLevelPushRef.current = timestamp;
-        setMicLevel((current) => Math.abs(current - mic) > 0.02 ? mic : current * 0.8 + mic * 0.2);
-        setSpeakerLevel((current) => Math.abs(current - speaker) > 0.02 ? speaker : current * 0.8 + speaker * 0.2);
+        setMicLevel((current) => {
+          const next = Math.round((current * 0.7 + mic * 0.3) * 12) / 12;
+          return Math.abs(current - next) >= 0.04 ? next : current;
+        });
+        setSpeakerLevel((current) => {
+          const next = Math.round((current * 0.7 + speaker * 0.3) * 12) / 12;
+          return Math.abs(current - next) >= 0.04 ? next : current;
+        });
       }
 
       levelAnimationRef.current = requestAnimationFrame(tick);
@@ -1518,6 +1510,24 @@ function App() {
     if (channelRef.current?.readyState !== 'open') return 'ignored';
     return getResponseOrchestrator().request(instructions, options);
   }, [getResponseOrchestrator]);
+
+  // This stays outside the realtime transport: a slow advisory must never
+  // disturb the active WebRTC conversation.
+  const evaluateScamRisk = useCallback(async (userRequest) => {
+    if (!userRequest?.trim()) return;
+    try {
+      const result = await api('/api/scam/evaluate', {
+        method: 'POST',
+        body: JSON.stringify({ user_request: userRequest, session_id: currentSessionIdRef.current }),
+      });
+      if (result.ui) {
+        pushSummaryCard(result.ui);
+        requestVoiceResponse(`A deterministic Scam Risk Advisor found high-risk signals in the customer's latest request. Do not state that it is definitely a scam. Briefly explain the matched concerns, ask one verification question, and give the safe recommendation from this verified result: ${JSON.stringify(result.data)}`, { priority: true, reason: 'scam_risk_advisory' });
+      }
+    } catch {
+      // Advisory evaluation must never interrupt the voice or banking core.
+    }
+  }, [api, pushSummaryCard, requestVoiceResponse]);
 
   const handleOrbPress = useCallback(() => {
     if (!connected) return;

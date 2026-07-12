@@ -1318,12 +1318,10 @@ input:focus-visible {
   0% {
     transform: translate(-50%, -50%) scale(1);
     opacity: 0.2;
-    border-width: 2px;
   }
   100% {
     transform: translate(-50%, -50%) scale(calc(1.35 + var(--orb-energy) * 1.1));
     opacity: 0;
-    border-width: 0.5px;
   }
 }
 
@@ -1332,6 +1330,48 @@ input:focus-visible {
   33% { border-radius: 60% 40% 30% 70% / 50% 60% 40% 50%; }
   66% { border-radius: 50% 50% 60% 40% / 40% 40% 60% 60%; }
   100% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+}
+
+/* Three large elements continuously animating blur and border-radius can make
+   compact mobile GPUs blink. Keep the live signal and ripple feedback, but
+   restrict touch devices to cheap compositor animations. */
+@media (max-width: 700px), (hover: none) and (pointer: coarse) {
+  .voice-orb,
+  .voice-orb-core,
+  .voice-orb-ring,
+  .voice-orb-signal span {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  .voice-orb-core,
+  .voice-orb.mode-idle .voice-orb-core,
+  .voice-orb.mode-muted .voice-orb-core,
+  .voice-orb.mode-thinking .voice-orb-core,
+  .voice-orb.is-connected .voice-orb-core,
+  .voice-orb.is-error .voice-orb-core {
+    animation: orb-mobile-breathe 2.8s ease-in-out infinite;
+    box-shadow: 0 14px 34px var(--orb-glow), 0 0 0 1px color-mix(in srgb, var(--orb-c) 30%, transparent);
+  }
+
+  .voice-orb.is-connected .voice-orb-ring,
+  .voice-orb.is-error .voice-orb-ring {
+    filter: none;
+  }
+
+  .voice-orb-ring { animation: none; }
+  .voice-orb:not(.mode-idle):not(.mode-muted) .voice-orb-ring { animation: orb-ripple-mobile 2.7s ease-out infinite; }
+}
+
+@keyframes orb-mobile-breathe {
+  0%, 100% { transform: translateZ(0) scale(0.99); }
+  50% { transform: translateZ(0) scale(1.025); }
+}
+
+@keyframes orb-ripple-mobile {
+  0% { transform: translate3d(-50%, -50%, 0) scale(1); opacity: 0.18; }
+  100% { transform: translate3d(-50%, -50%, 0) scale(1.32); opacity: 0; }
 }
 
 .brand-logo-svg {
