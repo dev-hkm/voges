@@ -1662,9 +1662,12 @@ function App() {
     commitMessage({ role: 'user', meta, content: prompt });
     pushTimeline('Understanding request');
     pushTimeline('Preparing response', '', 'processing');
-    setSummaryLoading(true);
+    // Do not open an empty Insight modal merely because a turn started. The
+    // first tool is often invisible conversation guidance, so opening here
+    // produced a blank skeleton that closed immediately. pushSummaryCard()
+    // opens the modal only after a validated banking result exists.
+    setSummaryLoading(false);
     setSummaryError('');
-    setSummaryModalOpen(true);
     sendEvent({
       type: 'conversation.item.create',
       item: {
