@@ -7,26 +7,30 @@
     "dev": "npm run build && wrangler pages dev dist --local --ip 127.0.0.1 --port 5173",
     "dev:ui": "vite",
     "build": "vite build",
+    "check:cloudflare": "wrangler pages functions build --outdir .wrangler/functions-check",
+    "verify": "npm run typecheck && npm test && npm run build && npm run check:cloudflare",
     "preview": "npm run build && wrangler pages dev dist --local --ip 127.0.0.1 --port 4173",
     "d1:seed:local": "wrangler d1 execute voges-banking --local --file=sample_data/schema.sql && wrangler d1 execute voges-banking --local --file=sample_data/seed.sql",
     "d1:seed:remote": "wrangler d1 execute voges-banking --remote --file=sample_data/schema.sql && wrangler d1 execute voges-banking --remote --file=sample_data/seed.sql",
     "d1:v3:local": "wrangler d1 execute voges-banking --local --file=migrations/0002_v3_security.sql",
     "d1:v3:remote": "wrangler d1 execute voges-banking --remote --file=migrations/0002_v3_security.sql",
+    "d1:history:local": "wrangler d1 execute voges-banking --local --file=migrations/0003_v5_history.sql",
+    "d1:history:remote": "wrangler d1 execute voges-banking --remote --file=migrations/0003_v5_history.sql",
     "test": "node --test tests/*.test.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@simplewebauthn/browser": "^13.3.0",
-    "@simplewebauthn/server": "^13.3.2",
-    "@vitejs/plugin-react": "latest",
-    "lucide-react": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "vite": "latest",
-    "zod": "^4.4.3"
+    "@simplewebauthn/browser": "13.3.0",
+    "@simplewebauthn/server": "13.3.2",
+    "@vitejs/plugin-react": "6.0.3",
+    "lucide-react": "1.24.0",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "vite": "8.1.4",
+    "zod": "4.4.3"
   },
   "devDependencies": {
-    "typescript": "^5.9.3",
-    "wrangler": "latest"
+    "typescript": "5.9.3",
+    "wrangler": "4.110.0"
   }
 }

@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
 import {
   Activity,
@@ -7,6 +7,7 @@ import {
   Check,
   Clock3,
   CreditCard,
+  Database,
   FileCheck2,
   Fingerprint,
   KeyRound,
@@ -29,8 +30,10 @@ import {
 } from 'lucide-react';
 import { ACTION_TOOL_NAMES, BANKING_TOOLS, SUGGESTED_ACTIONS, TOOL_LABELS } from './banking';
 import { ambiguityMessage, routeToolCall } from './intent-router.js';
+import { buildAdaptiveActionScenarios } from './demo-scenarios.js';
 import { SummaryCardDeck } from './components/SummaryCardRenderer.jsx';
 import { HistoryDrawer } from './components/HistoryDrawer.jsx';
+import { DataRoomModal } from './components/DataRoomModal.jsx';
 import {
   classifyRealtimeError,
   coerceRealtimeVoice,
@@ -75,7 +78,7 @@ const DEMO_SCENARIOS = [
     prompt: 'Why was my Netflix payment declined?',
     goal: 'Show that Voges can read transactions and card controls, then explain the exact decline reason.',
     path: ['Voice intent', 'getRecentTransactions', 'explainDeclineReason', 'Voice answer'],
-    expected: 'Voges explains that the Netflix payment was declined because online payments are disabled.',
+    expected: 'Voges explains the stored decline reason from the transaction and compares it with the latest card controls.',
   },
   {
     id: 'recent_transactions',
@@ -103,15 +106,6 @@ const DEMO_SCENARIOS = [
     goal: 'Show product knowledge retrieval from the banking knowledge base.',
     path: ['Voice intent', 'generateFundingInstruction', 'Funding card', 'Voice answer'],
     expected: 'Voges explains official funding instructions from the product documents.',
-  },
-  {
-    id: 'enable_online',
-    title: 'Enable online payments',
-    risk: 'Approval',
-    prompt: 'Enable online payments for my card.',
-    goal: 'Show the safety layer: AI proposes, backend policy evaluates, UI asks for approval, passkey verifies.',
-    path: ['Voice intent', 'Policy engine', 'Pending action', 'Passkey', 'Execute', 'Audit'],
-    expected: 'An approval sheet appears. The action only executes after confirmation and device verification.',
   },
   {
     id: 'blocked_transfer',
@@ -593,7 +587,7 @@ const MessageList = memo(function MessageList({ messages, liveUserTurn, liveAssi
   );
 });
 
-const ApprovalSheet = memo(function ApprovalSheet({ action, actionBusy, customerContext, hasPasskey, onCancel, onConfirm }) {
+const ApprovalSheet = memo(function ApprovalSheet({ action, actionBusy, actionProgress, customerContext, hasPasskey, onCancel, onConfirm }) {
   if (!action) return null;
 
   const preview = deriveActionPreview(action, customerContext);
@@ -643,6 +637,15 @@ const ApprovalSheet = memo(function ApprovalSheet({ action, actionBusy, customer
         </div>
         {action.requires_biometric && hasPasskey === false ? (
           <p className="approval-passkey-note">No device passkey is set up yet. Voges will open Windows Hello to set it up, then verify this exact action.</p>
+        ) : null}
+        {actionBusy ? (
+          <div className="approval-processing" role="status" aria-live="polite">
+            <LoaderCircle size={20} />
+            <div>
+              <strong>{actionProgress || 'Securing your action…'}</strong>
+              <span>Keep this screen open while Voges verifies and records the result.</span>
+            </div>
+          </div>
         ) : null}
         <div className="sheet-actions">
           <button className="secondary-action" onClick={onCancel} disabled={actionBusy} type="button">
@@ -792,6 +795,7 @@ const SettingsDrawer = memo(function SettingsDrawer({
   actionBusy,
   onClose,
   onSetupPasskey,
+  onOpenReceipt,
   theme,
   onThemeChange,
   voice,
@@ -805,15 +809,16 @@ const SettingsDrawer = memo(function SettingsDrawer({
   const passkeyCount = data?.passkeys?.length || 0;
   const pendingCount = data?.pending_actions?.length || 0;
   const auditCount = data?.audit?.length || 0;
+  const receiptCount = data?.verified_receipts?.length || 0;
 
   return (
     <div className="settings-backdrop" role="dialog" aria-modal="true" aria-label="Settings and security">
       <section className="settings-drawer">
       <div className="settings-head">
         <div>
-          <span className="eyebrow">Judge view</span>
-          <h2>Security &amp; Policies</h2>
-          <p>Backend policy, pending actions, passkeys, and audit logs behind the voice experience.</p>
+          <span className="eyebrow">Trust center</span>
+          <h2>Security &amp; Evidence</h2>
+          <p>See how backend policy, customer approval, passkeys, D1 state, and audit evidence protect every action.</p>
         </div>
         <IconButton label="Close settings" onClick={onClose}>
           <X size={18} />
@@ -841,7 +846,27 @@ const SettingsDrawer = memo(function SettingsDrawer({
           <span>Audit events</span>
           <strong>{auditCount}</strong>
         </div>
+        <div>
+          <span>Verified receipts</span>
+          <strong>{receiptCount}</strong>
+        </div>
       </div>
+
+      <section className="settings-section trust-pipeline-section">
+        <div className="settings-title">
+          <ShieldCheck size={16} />
+          <strong>Action trust pipeline</strong>
+        </div>
+        <div className="trust-pipeline" aria-label="Secure action pipeline">
+          {['AI proposes', 'Policy evaluates', 'Customer approves', 'Passkey verifies', 'D1 commits', 'Audit records'].map((step, index) => (
+            <div key={step}>
+              <span>{String(index + 1).padStart(2, '0')}</span>
+              <strong>{step}</strong>
+            </div>
+          ))}
+        </div>
+        <p>The language model can propose an action, but it never receives authority to execute it.</p>
+      </section>
 
       <section className="settings-section">
         <div className="settings-title">
@@ -890,6 +915,27 @@ const SettingsDrawer = memo(function SettingsDrawer({
               <option value="verse">Verse</option>
             </select>
           </div>
+        </div>
+      </section>
+
+      <section className="settings-section">
+        <div className="settings-title">
+          <FileCheck2 size={16} />
+          <strong>Verified action receipts</strong>
+        </div>
+        <p>Each receipt is reconstructed from the completed D1 action and its audit events, then fingerprinted with SHA-256 for a stable integrity reference.</p>
+        <div className="settings-list receipt-list">
+          {data?.verified_receipts?.length ? data.verified_receipts.map((receipt) => (
+            <button type="button" key={receipt.id} onClick={() => onOpenReceipt(receipt.id)}>
+              <span>{receipt.display_title}</span>
+              <small>{receipt.risk_level} · {new Date(receipt.executed_at).toLocaleString()}</small>
+            </button>
+          )) : (
+            <div>
+              <span>No verified receipt yet</span>
+              <small>Complete an approved action to generate one.</small>
+            </div>
+          )}
         </div>
       </section>
 
@@ -1014,8 +1060,11 @@ function App() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [demoScenariosOpen, setDemoScenariosOpen] = useState(false);
+  const [dataRoomOpen, setDataRoomOpen] = useState(false);
+  const [dataRoom, setDataRoom] = useState({ data: null, loading: false, error: '' });
   const [securityData, setSecurityData] = useState(null);
   const [actionBusy, setActionBusy] = useState(false);
+  const [actionProgress, setActionProgress] = useState('');
   const [online, setOnline] = useState(() => navigator.onLine);
   const [voiceMode, setVoiceMode] = useState('idle');
   const [sessionSeconds, setSessionSeconds] = useState(0);
@@ -1037,10 +1086,10 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const modalOpen = summaryModalOpen || resolutionPlanModalOpen || Boolean(pendingAction) || settingsOpen || historyOpen || demoScenariosOpen || diagOpen || directVoiceFallbackOpen;
+    const modalOpen = summaryModalOpen || resolutionPlanModalOpen || Boolean(pendingAction) || settingsOpen || historyOpen || demoScenariosOpen || dataRoomOpen || diagOpen || directVoiceFallbackOpen;
     document.body.classList.toggle('modal-open', modalOpen);
     return () => document.body.classList.remove('modal-open');
-  }, [demoScenariosOpen, diagOpen, directVoiceFallbackOpen, historyOpen, pendingAction, resolutionPlanModalOpen, settingsOpen, summaryModalOpen]);
+  }, [dataRoomOpen, demoScenariosOpen, diagOpen, directVoiceFallbackOpen, historyOpen, pendingAction, resolutionPlanModalOpen, settingsOpen, summaryModalOpen]);
 
   const peerRef = useRef(null);
   const channelRef = useRef(null);
@@ -1082,6 +1131,7 @@ function App() {
   const activeUserRequestRef = useRef('');
   const conversationTurnsRef = useRef([]);
   const proactiveToolBudgetRef = useRef(null);
+  const proposedActionKeysRef = useRef(new Set());
 
   // Global mouse tracking for dynamic UI interactions
   useEffect(() => {
@@ -1152,17 +1202,30 @@ function App() {
     });
   }, []);
 
-  const api = useCallback(async (path, options = {}) => readJsonResponse(
-    await fetch(path, {
-      headers: {
-        Accept: 'application/json',
-        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-        ...options.headers,
-      },
-      ...options,
-    }),
-    path,
-  ), []);
+  const api = useCallback(async (path, options = {}) => {
+    const { timeoutMs = 25_000, ...fetchOptions } = options;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(path, {
+        ...fetchOptions,
+        signal: controller.signal,
+        headers: {
+          Accept: 'application/json',
+          ...(fetchOptions.body ? { 'Content-Type': 'application/json' } : {}),
+          ...fetchOptions.headers,
+        },
+      });
+      return await readJsonResponse(response, path);
+    } catch (requestError) {
+      if (requestError?.name === 'AbortError') {
+        throw new Error('The secure banking request timed out. No unconfirmed action was executed.');
+      }
+      throw requestError;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }, []);
 
   const loadCustomerContext = useCallback(async () => {
     try {
@@ -1191,6 +1254,25 @@ function App() {
     }
   }, [api]);
 
+  const loadDataRoom = useCallback(async () => {
+    setDataRoom((current) => ({ ...current, loading: true, error: '' }));
+    try {
+      const payload = await api('/api/showcase/snapshot');
+      setDataRoom({ data: payload.data, loading: false, error: '' });
+    } catch (snapshotError) {
+      setDataRoom((current) => ({
+        ...current,
+        loading: false,
+        error: normalizeErrorMessage(snapshotError.message || 'Could not read the D1 snapshot.'),
+      }));
+    }
+  }, [api]);
+
+  const openDataRoom = useCallback(() => {
+    setDataRoomOpen(true);
+    void loadDataRoom();
+  }, [loadDataRoom]);
+
   const showSuccess = useCallback((title, description) => {
     const nextSuccess = { title, description };
     successStateRef.current = nextSuccess;
@@ -1218,6 +1300,20 @@ function App() {
     setSummaryLoading(false);
     setSummaryError('');
   }, []);
+
+  const openVerifiedReceipt = useCallback(async (actionId) => {
+    try {
+      setSettingsOpen(false);
+      setSummaryLoading(true);
+      setSummaryError('');
+      setSummaryModalOpen(true);
+      const payload = await api(`/api/actions/${actionId}/receipt`);
+      if (payload.ui) pushSummaryCard(payload.ui);
+    } catch (receiptError) {
+      setSummaryLoading(false);
+      setSummaryError(normalizeErrorMessage(receiptError.message || 'Could not load the verified receipt.'));
+    }
+  }, [api, pushSummaryCard]);
 
   const finalizeHistorySession = useCallback((finalOutcome = '') => {
     const sessionId = currentSessionIdRef.current;
@@ -1548,6 +1644,7 @@ function App() {
     if (!prompt || channelRef.current?.readyState !== 'open') return false;
 
     activeUserRequestRef.current = prompt;
+    proposedActionKeysRef.current.clear();
 
     void evaluateScamRisk(prompt);
 
@@ -1582,6 +1679,7 @@ function App() {
     const toolLabel = TOOL_LABELS[toolName] || toolName;
     const userRequest = activeUserRequestRef.current || 'Customer request was transcribed without a stable text snapshot.';
     const isConversationGuidance = toolName === 'getConversationGuidance';
+    const isAction = ACTION_TOOL_NAMES.has(toolName);
     const proactiveBudget = proactiveToolBudgetRef.current;
     const routed = routeToolCall({ request: userRequest, toolName });
     const route = !isConversationGuidance && proactiveBudget
@@ -1605,6 +1703,16 @@ function App() {
         sendEvent({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: item.call_id, output: JSON.stringify({ skipped: true, instruction: route.reason }) } });
         return;
       }
+      if (isAction) {
+        const actionKey = `${toolName}:${JSON.stringify(args)}`;
+        if (proposedActionKeysRef.current.has(actionKey)) {
+          finalizeTimelineStep('completed');
+          pushTimeline('Using existing approval request', toolLabel, 'completed');
+          sendEvent({ type: 'conversation.item.create', item: { type: 'function_call_output', call_id: item.call_id, output: JSON.stringify({ action_proposed: true, instruction: 'An identical approval request is already on screen. Do not propose it again.' }) } });
+          return;
+        }
+        proposedActionKeysRef.current.add(actionKey);
+      }
       if (isConversationGuidance) {
         const response = await fetch('/api/conversation/guide', {
           method: 'POST',
@@ -1623,7 +1731,6 @@ function App() {
         return;
       }
       const isResolutionAutopilot = toolName === 'startResolutionAutopilot';
-      const isAction = ACTION_TOOL_NAMES.has(toolName);
       if (isAction) pushTimeline('Applying security policy');
       if (isResolutionAutopilot) pushTimeline('Investigating root cause');
       const response = await fetch(isResolutionAutopilot ? '/api/resolution/analyze' : (isAction ? '/api/actions/propose' : '/api/banking/tools'), {
@@ -1769,6 +1876,7 @@ function App() {
 
     if (event.type === 'input_audio_buffer.speech_started') {
       activeUserRequestRef.current = '';
+      proposedActionKeysRef.current.clear();
       inputSpeechActiveRef.current = true;
       const responseSnapshot = getResponseOrchestrator().snapshot();
       if (responseActiveRef.current || responseSnapshot.createPending) {
@@ -2187,6 +2295,7 @@ function App() {
       body: JSON.stringify({ execution_token: executionToken }),
     });
     if (result.ui) pushSummaryCard(result.ui);
+    if (result.receipt_ui) pushSummaryCard(result.receipt_ui);
     if (toolName === 'executeResolutionPlan') {
       setResolutionPendingAction(null);
       setResolutionPlanCard(null);
@@ -2227,6 +2336,7 @@ function App() {
 
     try {
       setActionBusy(true);
+      setActionProgress('Confirming your approval…');
       pushTimeline('Confirming action');
       const alreadyAwaitingVerification = pendingAction.status === 'awaiting_biometric';
       const confirmed = alreadyAwaitingVerification
@@ -2237,10 +2347,12 @@ function App() {
       safeVibrate(8);
 
       if (!action.requires_biometric) {
+        setActionProgress('Applying approved change…');
         await finishAction(action.id, confirmed.data.execution_token, action.tool_name);
         return;
       }
 
+      setActionProgress('Preparing device verification…');
       pushTimeline('Checking your identity');
       let options;
       try {
@@ -2255,8 +2367,10 @@ function App() {
           method: 'POST', body: JSON.stringify({ pending_action_id: action.id }),
         });
       }
+      setActionProgress('Verify with your device…');
       pushDiag('info', 'webauthn.assertion.requested', { action_id: action.id });
       const response = await startAuthentication({ optionsJSON: options });
+      setActionProgress('Verifying cryptographic signature…');
       pushDiag('info', 'webauthn.assertion.received', { action_id: action.id });
       const verification = await api('/api/webauthn/authenticate/verify', {
         method: 'POST',
@@ -2264,6 +2378,7 @@ function App() {
       });
       safeVibrate([8, 30, 14]);
       pushTimeline('Identity verified');
+      setActionProgress('Applying verified change…');
       await finishAction(action.id, verification.execution_token, action.tool_name);
     } catch (actionError) {
       pushTimeline('Verification not completed', '', 'error');
@@ -2273,6 +2388,7 @@ function App() {
       setError(normalizeErrorMessage(message));
     } finally {
       setActionBusy(false);
+      setActionProgress('');
     }
   }, [api, finishAction, pendingAction, pushTimeline, registerPasskey]);
 
@@ -2292,10 +2408,18 @@ function App() {
   const sendText = useCallback((event) => {
     event?.preventDefault();
     const value = text.trim();
-    if (!value || !connected) return;
-    sendUserText(value);
+    if (!value || connecting || !online) return;
     setText('');
-  }, [connected, sendUserText, text]);
+    if (connected) {
+      sendUserText(value, 'Typed prompt');
+      return;
+    }
+    // Reuse the proven suggested-action handoff: the typed message waits for
+    // the WebRTC channel to be open, then is sent once by session.ready.
+    pendingPromptRef.current = value;
+    pushTimeline('Preparing typed request');
+    startSession();
+  }, [connected, connecting, online, pushTimeline, sendUserText, startSession, text]);
 
   const useSuggestedAction = useCallback((prompt) => {
     if (connected) {
@@ -2388,8 +2512,15 @@ function App() {
     }
     if (action.action === 'history:transactions') {
       setHistoryOpen(true);
+      return;
     }
-  }, [explainTransactionFromSummary, pushTimeline, resolutionPendingAction]);
+    if (action.action === 'receipt:copy') {
+      const proof = JSON.stringify(action.payload || {}, null, 2);
+      navigator.clipboard.writeText(proof)
+        .then(() => showSuccess('Verification proof copied', 'The privacy-safe receipt is ready to paste into a report.'))
+        .catch(() => setError('Could not copy the verification proof.'));
+    }
+  }, [explainTransactionFromSummary, pushTimeline, resolutionPendingAction, showSuccess]);
 
   const handleArchiveHistory = useCallback(async (sessionId) => {
     try {
@@ -2402,6 +2533,22 @@ function App() {
   }, [api, showSuccess]);
 
   const emptyStateVisible = !messages.length && !liveUserTurn?.content && !liveAssistantTurn?.content;
+  const demoScenarios = useMemo(() => [
+    ...DEMO_SCENARIOS.slice(0, 4),
+    ...buildAdaptiveActionScenarios(customerContext?.cards?.[0] || null),
+    ...DEMO_SCENARIOS.slice(4),
+  ], [customerContext]);
+  const suggestedActions = useMemo(() => {
+    const onlineEnabled = Boolean(customerContext?.cards?.[0]?.online_payment_enabled);
+    return SUGGESTED_ACTIONS.map((action) => action.label === 'Enable online payments' && onlineEnabled
+      ? {
+          ...action,
+          label: 'Disable online payments',
+          prompt: 'Disable online payments for my card.',
+          proof: 'Creates a verified D1 state change',
+        }
+      : action);
+  }, [customerContext]);
 
   return (
     <main className="app-shell">
@@ -2417,6 +2564,12 @@ function App() {
           {/* Topbar context removed to clean up UI strings */}
 
           <div className="topbar-actions">
+            <IconButton
+              label="Demo Data Room"
+              onClick={openDataRoom}
+            >
+              <Database size={18} />
+            </IconButton>
             <IconButton
               label="Demo Scenarios"
               onClick={() => setDemoScenariosOpen(true)}
@@ -2533,11 +2686,25 @@ function App() {
                   )}
                 </div>
               )}
+
+              <form className="text-composer voice-prompt-composer" onSubmit={sendText}>
+                <input
+                  value={text}
+                  onChange={(event) => setText(event.target.value)}
+                  placeholder={connected ? 'Type a message if voice misses it…' : 'Type a prompt or start with voice…'}
+                  aria-label="Type a message for Voges"
+                  disabled={connecting || !online}
+                  maxLength={800}
+                />
+                <button type="submit" disabled={!text.trim() || connecting || !online} aria-label="Send typed message">
+                  <ArrowUp size={18} />
+                </button>
+              </form>
             </section>
 
             {emptyStateVisible && (
               <section className="quick-actions" aria-label="Suggested banking actions">
-                {SUGGESTED_ACTIONS.map((action) => (
+                {suggestedActions.map((action) => (
                   <button className="quick-action-card" key={action.label} onClick={() => useSuggestedAction(action.prompt)} type="button">
                     <span className="quick-action-topline">
                       <span>{action.group}</span>
@@ -2616,10 +2783,18 @@ function App() {
         />
         <DemoScenariosModal
           open={demoScenariosOpen}
-          scenarios={DEMO_SCENARIOS}
+          scenarios={demoScenarios}
           onTry={tryDemoScenario}
           onCopy={copyDemoPrompt}
           onClose={() => setDemoScenariosOpen(false)}
+        />
+        <DataRoomModal
+          open={dataRoomOpen}
+          data={dataRoom.data}
+          loading={dataRoom.loading}
+          error={dataRoom.error}
+          onRefresh={loadDataRoom}
+          onClose={() => setDataRoomOpen(false)}
         />
         <DirectVoiceFallbackSheet
           open={directVoiceFallbackOpen}
@@ -2641,6 +2816,7 @@ function App() {
         <ApprovalSheet
           action={pendingAction}
           actionBusy={actionBusy}
+          actionProgress={actionProgress}
           customerContext={customerContext}
           hasPasskey={securityData ? Boolean(securityData.passkeys?.length) : null}
           onCancel={cancelPendingAction}
@@ -2659,6 +2835,7 @@ function App() {
           actionBusy={actionBusy}
           onClose={() => setSettingsOpen(false)}
           onSetupPasskey={setupPasskey}
+          onOpenReceipt={openVerifiedReceipt}
           theme={theme}
           onThemeChange={setTheme}
           voice={voice}

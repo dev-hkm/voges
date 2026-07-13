@@ -1,66 +1,245 @@
 # Voges
 
-## V3 security architecture
+Voges is a voice-first AI financial concierge prototype. It combines natural realtime conversation with deterministic banking tools, backend policy, visible approval, real WebAuthn passkeys, D1 state changes, and an auditable security trail.
 
-Voges keeps its browser-to-OpenAI Realtime voice connection intact. Banking reads remain tool calls; every write starts as a proposal and moves through a deterministic Cloudflare Pages policy check, an expiring pending action, visible user approval, WebAuthn, server-side execution, and an append-only audit log.
+The core product principle is:
 
-`Voice → proposed action → policy → approval → passkey → execute → audit → spoken result`
+> Voice is the primary interface. The screen is the safety layer.
 
-Voges uses real WebAuthn cryptographic authentication. The application never receives fingerprint or facial biometric data. The browser and operating system perform local user verification and return a signed WebAuthn assertion.
+Voges is a portfolio and architecture prototype built with a workspace sample banking dataset. It is not an official bank product and does not connect to a live core-banking system.
 
-### Required environment variables
+## Quick start
 
+```bash
+npm install
+npm run d1:seed:local
+npm run d1:v3:local
+npm run d1:history:local
+npm run dev
 ```
-OPENAI_API_KEY=...
-WEBAUTHN_RP_ID=voges.pages.dev
+
+Open `http://localhost:5173`. Use `npm run dev:ui` only for frontend styling; API, D1, voice token minting, actions, and passkeys require the full Pages development server.
+
+Before committing or deploying, run the complete verification suite:
+
+```bash
+npm run verify
+```
+
+This command runs type checking, automated tests, the Vite production build, and a Cloudflare Pages Functions compatibility build.
+
+## What Voges demonstrates
+
+- OpenAI `gpt-realtime-2.1` voice conversation over browser WebRTC.
+- Immediate language adaptation to the customer's latest spoken language.
+- D1-backed banking reads for profiles, accounts, cards, transactions, KYC, product guidance, and support activity.
+- Deterministic tool routing and conversation guidance for vague requests.
+- A backend Policy Engine that owns risk and authorization decisions.
+- Expiring pending actions and an on-screen approval contract.
+- Real WebAuthn registration and authentication using the device platform authenticator.
+- Exactly-once write execution with short-lived execution tokens.
+- Resolution Autopilot for root-cause analysis, bounded multi-step plans, and payment readiness checks.
+- Scam Risk Advisor based on `sample_data/luadao.json.txt` as an advisory knowledge source.
+- Session history, structured visual cards, D1 audit events, and a security Trust Center.
+- Verified Action Receipts reconstructed from completed D1 actions and audit evidence.
+- A Demo Data Room that displays a live, privacy-safe D1 snapshot for portfolio walkthroughs.
+- Whole-app display recovery so a React rendering fault does not leave a blank screen.
+
+## Architecture
+
+### Realtime voice
+
+Realtime has two separate phases and they must remain separate:
+
+```text
+REST token minting
+Browser -> /api/realtime/token -> Cloudflare AI binding / AI Gateway -> OpenAI
+
+Live media transport
+Browser microphone -> WebRTC -> OpenAI Realtime
+```
+
+The REST endpoint returns a short-lived client secret. The browser then negotiates WebRTC directly with OpenAI. The server never proxies live microphone audio.
+
+`src/realtime-orchestrator.js` is the only module allowed to create model responses. Server VAD detects turns but does not create responses itself. This prevents duplicate active responses.
+
+Read [ARCHITECTURE_GUARDRAILS.md](./ARCHITECTURE_GUARDRAILS.md) before changing any voice file.
+
+### Banking reads
+
+```text
+Customer request
+  -> GPT tool proposal
+  -> deterministic client routing budget
+  -> Cloudflare Pages Function
+  -> allowlisted Tool Layer
+  -> D1 query
+  -> structured UI card + natural voice explanation
+```
+
+The model does not receive arbitrary SQL access. Every tool name and input shape is allowlisted.
+
+### Sensitive actions
+
+```text
+AI proposes
+  -> backend validates tool and payload
+  -> Policy Engine evaluates current D1 state
+  -> expiring pending action
+  -> visible customer approval
+  -> WebAuthn assertion when required
+  -> backend verifies origin, RP ID, signature, counter, and user verification
+  -> short-lived execution token
+  -> policy re-evaluation
+  -> atomic D1 execution lock
+  -> state update
+  -> append-only application audit event
+  -> verified action receipt
+  -> voice confirmation
+```
+
+The frontend never grants execution authority. It cannot make an action safe by sending fields such as `biometricVerified: true`.
+
+## Verified Action Receipts
+
+After a completed action, Voges builds a privacy-safe receipt from:
+
+- the persisted pending-action contract;
+- the backend policy decision;
+- confirmation and WebAuthn timestamps;
+- allowlisted before/after D1 fields;
+- related audit event types;
+- the final execution outcome.
+
+The receipt receives a SHA-256 fingerprint as a stable integrity reference. This is not a digital signature or external notarization. Production use would store or sign the receipt through a separate trust service.
+
+Receipts can be reopened from **Security & Evidence -> Verified action receipts** and copied as structured JSON.
+
+## Demo Data Room
+
+The Data Room queries D1 at request time and displays only a masked portfolio snapshot:
+
+- customer risk, KYC, and account status;
+- account balances and currencies;
+- masked card controls and limits;
+- recent transaction status;
+- recent support activity;
+- action and audit counts.
+
+The endpoint deliberately excludes email, phone, encrypted card data, document numbers, WebAuthn public keys, challenges, IP hashes, and raw audit metadata.
+
+## WebAuthn and passkeys
+
+Voges uses real WebAuthn cryptographic authentication. The application never receives fingerprint images, facial images, device PINs, or raw biometric data. The browser and operating system perform local user verification and return a signed assertion.
+
+Required variables:
+
+```dotenv
+WEBAUTHN_RP_ID=localhost
 WEBAUTHN_RP_NAME=Voges
-WEBAUTHN_ORIGIN=https://voges.pages.dev
+WEBAUTHN_ORIGIN=http://localhost:5173
 EXECUTION_TOKEN_SECRET=<long-random-secret>
 ```
 
-For local development use `WEBAUTHN_RP_ID=localhost` and `WEBAUTHN_ORIGIN=http://localhost:5173`. Passkeys are scoped to their RP ID, so register again in production.
+Production example:
 
-### D1 migration and deployment
-
-Run `npm run d1:v3:local` after the V2 seed locally, and `npm run d1:v3:remote` once against the production D1 database. Then build with `npm run build` and deploy Pages with `npx wrangler pages deploy dist --project-name voges`.
-
-### Testing the real flow
-
-Open Security & Policies, select **Set up device authentication**, and complete the native browser prompt. On Chrome Android it can use a device passkey/fingerprint/PIN; Safari iOS uses Face ID/Touch ID/passcode; Windows can use Windows Hello. Ask Voges to enable online payments, review the sheet, then verify with the device. Cancelling or failing the native prompt does not execute the action.
-
-This demo resolves the seeded demo customer server-side because V1/V2 has no end-user login identity. A production multi-customer rollout must bind the authenticated account identity to the customer record; the frontend customer ID is ignored by V3 action endpoints.
-
-Mobile-first realtime voice chat using React, Vite, Cloudflare Pages Functions, and OpenAI Realtime API.
-
-## Local setup
-
-1. Install dependencies: `npm install`
-2. Copy `.dev.vars.example` to `.dev.vars` and set `OPENAI_API_KEY` locally.
-3. Run the full Cloudflare Pages app: `npm run dev`
-
-The complete app, including Pages Functions, is ready at `http://localhost:5173`. Use `npm run dev:ui` only for frontend-only styling work; realtime voice cannot work in that mode because it does not run Pages Functions.
-
-## Cloudflare setup
-
-Set `OPENAI_API_KEY` as an encrypted secret in the Pages project under Settings > Variables and Secrets. Do not put it in `wrangler.toml` or frontend code.
-
-The production Pages Function uses the `AI` binding declared in `wrangler.toml` to mint Realtime client secrets through Cloudflare AI Gateway. Keep Smart Placement enabled in **Workers & Pages → Voges → Settings → Runtime** for both production and preview. The `default` AI Gateway must permit the server-side provider-native request; for this demo its gateway authentication is disabled. If authentication is re-enabled later, configure a scoped AI Gateway Run credential on the server before deploying.
-
-Verify the deployment before a demo:
-
-```bash
-curl https://voges.pages.dev/api/realtime/token
+```dotenv
+WEBAUTHN_RP_ID=voges.pages.dev
+WEBAUTHN_RP_NAME=Voges
+WEBAUTHN_ORIGIN=https://voges.pages.dev
 ```
 
-It must return HTTP 200 with a short-lived `value` and a session model of `gpt-realtime-2.1`.
+Passkeys are scoped to the RP ID. A localhost credential must be registered again on the production domain.
 
-The app uses `gpt-realtime-2.1` and WebRTC. Optional D1, R2, KV, and Queues bindings are documented in `wrangler.toml` for persistence, media exports, session state, and background events.
+## OpenAI and Cloudflare configuration
 
-## V2 banking layer
+Required server-side secret:
 
-V2 uses the D1 database bound as `DB`. It imports the existing source-of-truth files in `sample_data/` without generating new data:
+```dotenv
+OPENAI_API_KEY=<server-only-key>
+```
 
-- `npm run d1:seed:local` initializes the local D1 database.
-- `npm run d1:seed:remote` imports the same schema and seed into the remote `voges-banking` database.
+Never place this key in React, a `VITE_` variable, `wrangler.toml`, source control, documentation, or a browser request.
 
-The Pages Function tool layer lives in `functions/_lib/banking.js`. Its read tools query D1; `createSupportTicket` deliberately returns `Action Proposed` and never writes data. Policy, approval, biometric, pending-action, and audit behavior are intentionally deferred to V3.
+`wrangler.toml` must retain the Cloudflare AI binding:
+
+```toml
+[ai]
+binding = "AI"
+```
+
+The production token function uses the binding to reach the configured AI Gateway before returning an ephemeral Realtime client secret. Smart Placement should remain enabled for production and preview deployments.
+
+## Database setup
+
+The source dataset lives in `sample_data/`.
+
+```bash
+npm run d1:seed:local
+npm run d1:v3:local
+npm run d1:history:local
+```
+
+Run remote migrations only after confirming the target D1 database:
+
+```bash
+npm run d1:seed:remote
+npm run d1:v3:remote
+npm run d1:history:remote
+```
+
+Migration files are additive and live in `migrations/`. Do not delete existing production data to apply a new capability.
+
+## Testing a complete action
+
+1. Open **Security & Evidence**.
+2. Set up device authentication if no passkey exists.
+3. Ask: `Enable online payments for my card.`
+4. Review the exact resource, before/after state, risk, policy reason, and expiration.
+5. Confirm and complete the native Windows Hello, Android, or iOS passkey prompt.
+6. Confirm the D1-backed card snapshot changes.
+7. Open the generated Verified Action Receipt.
+8. Check the audit trail for policy, verification, execution, and completion events.
+
+Cancelling the native prompt is not success and does not execute the action.
+
+## Important limitations
+
+- The current build resolves one server-side demo customer because it has no end-user login system.
+- The dataset is a sample D1 dataset, not live bank data.
+- The audit log is append-only at the application layer; it is not an immutable external ledger.
+- A receipt hash is an integrity reference, not a third-party signature.
+- Scam Risk Advisor is advisory and must not be described as guaranteed fraud detection.
+- Resolution Autopilot never performs a real payment.
+- Production rollout requires authenticated customer binding, a real banking integration, centralized observability, formal security review, and compliance controls.
+
+## Project structure
+
+```text
+src/                         React voice-first interface
+src/realtime.js              Realtime session contracts and error handling
+src/realtime-orchestrator.js Single owner of response.create
+src/components/              Structured cards, history, recovery, and Data Room
+functions/api/               Cloudflare Pages Function routes
+functions/_lib/              Banking, policy, actions, WebAuthn, audit, and receipts
+shared/                      Shared Realtime and UI schemas
+migrations/                  Additive D1 migrations
+sample_data/                 Workspace banking dataset and scam knowledge source
+tests/                       Node test suite
+```
+
+## Deployment
+
+Build and verify first:
+
+```bash
+npm run verify
+```
+
+Then deploy to the existing Cloudflare Pages project only when intended:
+
+```bash
+npx wrangler pages deploy dist --project-name voges --branch main --commit-dirty=true
+```
+
+This repository intentionally does not deploy as part of the verification command.

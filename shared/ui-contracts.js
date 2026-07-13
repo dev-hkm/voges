@@ -9,6 +9,7 @@ export const SUMMARY_CARD_TYPES = [
   'pending_action',
   'support_ticket',
   'security_result',
+  'verified_action_receipt',
   'resolution_plan',
   'resolution_complete',
   'scam_risk',
@@ -155,6 +156,33 @@ const securityResultSchema = summaryCardBase.extend({
   }),
 });
 
+const verifiedActionReceiptSchema = summaryCardBase.extend({
+  type: z.literal('verified_action_receipt'),
+  data: z.object({
+    receipt_id: z.string().min(1),
+    action_id: z.string().min(1),
+    issued_at: z.string().min(1),
+    status: z.literal('completed'),
+    tool_name: z.string().min(1),
+    affected_resource: z.string().min(1),
+    risk_level: z.string().min(1),
+    policy_decision: z.string().min(1),
+    policy_reason: z.string().min(1),
+    verification_method: z.string().min(1),
+    verification_status: z.string().min(1),
+    database_status: z.string().min(1),
+    outcome: z.string().min(1),
+    state_changes: z.array(z.object({
+      field: z.string().min(1),
+      label: z.string().min(1),
+      before: z.union([z.string(), z.number()]),
+      after: z.union([z.string(), z.number()]),
+    })).default([]),
+    audit_event_count: z.number().int().nonnegative(),
+    integrity_hash: z.string().min(16),
+  }),
+});
+
 const resolutionStepSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
@@ -233,6 +261,7 @@ export const summaryCardSchema = z.discriminatedUnion('type', [
   pendingActionSchema,
   supportTicketSchema,
   securityResultSchema,
+  verifiedActionReceiptSchema,
   resolutionPlanSchema,
   resolutionCompleteSchema,
   scamRiskSchema,

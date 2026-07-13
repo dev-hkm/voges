@@ -1,2 +1,25 @@
-import { demoCustomerId, json } from '../../_lib/core.js'; import { ACTION_METADATA } from '../../_lib/policy.js';
-export async function onRequestGet({env}) { try { const customerId=await demoCustomerId(env.DB); const [passkeys,pending,audit,rules]=await Promise.all([env.DB.prepare('SELECT id,credential_id,device_type,backed_up,created_at,last_used_at FROM webauthn_credentials WHERE customer_id=?').bind(customerId).all(),env.DB.prepare("SELECT id,display_title,risk_level,status,expires_at,created_at FROM pending_actions WHERE customer_id=? ORDER BY created_at DESC LIMIT 20").bind(customerId).all(),env.DB.prepare('SELECT id,timestamp,event_type,tool_name,policy_result,biometric_verified,execution_result FROM audit_logs WHERE customer_id=? ORDER BY timestamp DESC LIMIT 50').bind(customerId).all(),env.DB.prepare('SELECT code,rule_description,enforcement_level FROM guardrails WHERE is_active=1 ORDER BY code').all()]); return json({data:{tool_permissions:ACTION_METADATA,passkeys:passkeys.results,pending_actions:pending.results,audit:audit.results,policy_rules:rules.results}}); } catch(error) { return json({error:error.message},400); } }
+import { demoCustomerId, json, now } from '../../_lib/core.js';
+import { ACTION_METADATA } from '../../_lib/policy.js';
+
+export async function onRequestGet({ env }) {
+  try {
+    const customerId = await demoCustomerId(env.DB);
+    const [passkeys, pending, audit, rules, receipts] = await Promise.all([
+      env.DB.prepare('SELECT id,credential_id,device_type,backed_up,created_at,last_used_at FROM webauthn_credentials WHERE customer_id=?').bind(customerId).all(),
+      env.DB.prepare("SELECT id,display_title,risk_level,status,expires_at,created_at FROM pending_actions WHERE customer_id=? AND status IN ('awaiting_confirmation','awaiting_biometric','verified') AND expires_at>? ORDER BY created_at DESC LIMIT 20").bind(customerId, now()).all(),
+      env.DB.prepare('SELECT id,timestamp,event_type,tool_name,policy_result,biometric_verified,execution_result FROM audit_logs WHERE customer_id=? ORDER BY timestamp DESC LIMIT 50').bind(customerId).all(),
+      env.DB.prepare('SELECT code,rule_description,enforcement_level FROM guardrails WHERE is_active=1 ORDER BY code').all(),
+      env.DB.prepare("SELECT id,display_title,tool_name,affected_resource,risk_level,executed_at FROM pending_actions WHERE customer_id=? AND status='completed' ORDER BY executed_at DESC LIMIT 12").bind(customerId).all(),
+    ]);
+    return json({ data: {
+      tool_permissions: ACTION_METADATA,
+      passkeys: passkeys.results,
+      pending_actions: pending.results,
+      audit: audit.results,
+      policy_rules: rules.results,
+      verified_receipts: receipts.results,
+    } });
+  } catch (error) {
+    return json({ error: error.message }, 400);
+  }
+}

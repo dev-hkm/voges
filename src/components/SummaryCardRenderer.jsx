@@ -220,6 +220,46 @@ function SecurityResultCard({ card }) {
   );
 }
 
+function VerifiedActionReceiptCard({ card, onAction }) {
+  const data = card.data;
+  const shortHash = `${data.integrity_hash.slice(0, 12)}…${data.integrity_hash.slice(-8)}`;
+  return (
+    <CardShell icon={<ReceiptText size={18} />} title={card.title} subtitle={card.subtitle} actions={card.actions} onAction={onAction}>
+      <div className="receipt-status-line">
+        <span><BadgeCheck size={16} /> Completed</span>
+        <small>{formatDate(data.issued_at)}</small>
+      </div>
+      <div className="summary-kv receipt-kv">
+        <div><span>Action</span><strong>{data.tool_name}</strong></div>
+        <div><span>Resource</span><strong>{data.affected_resource}</strong></div>
+        <div><span>Policy</span><strong>{data.policy_decision}</strong></div>
+        <div><span>Risk</span><strong>{data.risk_level}</strong></div>
+        <div><span>Verification</span><strong>{data.verification_status}</strong></div>
+        <div><span>Persistence</span><strong>{data.database_status}</strong></div>
+      </div>
+      {data.state_changes.length ? (
+        <div className="receipt-changes">
+          <span>Verified state change</span>
+          {data.state_changes.map((change) => (
+            <div key={change.field}>
+              <strong>{change.label}</strong>
+              <small>{String(change.before)} <ArrowRight size={12} /> {String(change.after)}</small>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      <div className="receipt-outcome">
+        <span>Outcome</span>
+        <strong>{data.outcome}</strong>
+      </div>
+      <div className="receipt-proof">
+        <div><span>Audit events</span><strong>{data.audit_event_count}</strong></div>
+        <div><span>Integrity hash</span><code title={data.integrity_hash}>{shortHash}</code></div>
+      </div>
+    </CardShell>
+  );
+}
+
 function ResolutionPlanCard({ card, onAction }) {
   const data = card.data;
   return (
@@ -294,6 +334,7 @@ const CARD_COMPONENTS = {
   pending_action: PendingActionCard,
   support_ticket: SupportTicketCard,
   security_result: SecurityResultCard,
+  verified_action_receipt: VerifiedActionReceiptCard,
   resolution_plan: ResolutionPlanCard,
   resolution_complete: ResolutionCompleteCard,
   scam_risk: ScamRiskCard,

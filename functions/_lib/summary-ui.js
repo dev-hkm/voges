@@ -298,6 +298,41 @@ export function buildSecurityResultSummary({ action, result, auditReference }) {
   });
 }
 
+export function buildVerifiedActionReceiptSummary(receipt) {
+  return validateSummaryCard({
+    type: 'verified_action_receipt',
+    title: 'Verified action receipt',
+    subtitle: 'Generated from policy, passkey, D1, and audit evidence',
+    data: {
+      receipt_id: receipt.receipt_id,
+      action_id: receipt.action_id,
+      issued_at: receipt.issued_at,
+      status: receipt.status,
+      tool_name: receipt.tool_name,
+      affected_resource: receipt.affected_resource,
+      risk_level: receipt.risk_level,
+      policy_decision: receipt.policy.decision,
+      policy_reason: receipt.policy.reason,
+      verification_method: receipt.verification.method,
+      verification_status: receipt.verification.required
+        ? (receipt.verification.verified ? 'Cryptographically verified' : 'Verification incomplete')
+        : (receipt.verification.verified ? 'Confirmed on screen' : 'Confirmation incomplete'),
+      database_status: receipt.persistence.committed ? 'Committed to Cloudflare D1' : 'Not committed',
+      outcome: receipt.outcome,
+      state_changes: receipt.persistence.state_changes,
+      audit_event_count: receipt.audit.event_count,
+      integrity_hash: receipt.integrity_hash,
+    },
+    actions: [{
+      label: 'Copy verification proof',
+      action: 'receipt:copy',
+      variant: 'ghost',
+      payload: receipt,
+    }],
+    metadata: { action_id: receipt.action_id, receipt_id: receipt.receipt_id },
+  });
+}
+
 export function buildResolutionPlanSummary(plan, pendingAction) {
   return validateSummaryCard({
     type: 'resolution_plan',

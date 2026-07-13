@@ -128,7 +128,7 @@ export async function finalizeSessionSummary({ db, request, customerId, sessionI
   const [auditRows, actionRows, cardRows] = await Promise.all([
     db.prepare('SELECT event_type, tool_name, biometric_verified, execution_result, timestamp FROM audit_logs WHERE customer_id = ? AND session_id = ? ORDER BY timestamp DESC LIMIT 100')
       .bind(customerId, sessionId).all(),
-    db.prepare('SELECT id, tool_name, display_title, status, result_json, requires_biometric, created_at FROM pending_actions WHERE customer_id = ? AND session_id = ? ORDER BY created_at DESC LIMIT 20')
+    db.prepare('SELECT id, tool_name, display_title, status, result_json, requires_biometric, biometric_verified_at, created_at FROM pending_actions WHERE customer_id = ? AND session_id = ? ORDER BY created_at DESC LIMIT 20')
       .bind(customerId, sessionId).all(),
     db.prepare('SELECT payload_json, created_at FROM session_visual_cards WHERE customer_id = ? AND session_id = ? ORDER BY created_at DESC LIMIT 20')
       .bind(customerId, sessionId).all(),
@@ -137,11 +137,16 @@ export async function finalizeSessionSummary({ db, request, customerId, sessionI
   const actions = actionRows.results || [];
   const cards = (cardRows.results || []).map((row) => validateSummaryCard(parseJson(row.payload_json, {})));
   const tools = unique((auditRows.results || []).map((row) => row.tool_name));
-  const biometricVerified = (auditRows.results || []).some((row) => Boolean(row.biometric_verified)) || actions.some((row) => Boolean(row.requires_biometric));
+  const biometricRequired = actions.some((row) => Boolean(row.requires_biometric));
+  const biometricVerified = (auditRows.results || []).some((row) => Boolean(row.biometric_verified)) || actions.some((row) => Boolean(row.biometric_verified_at));
   const primaryIntent = inferPrimaryIntent(tools, actions, cards);
   const title = inferTitle(primaryIntent, cards, actions);
   const finalOutcome = finalOutcomeHint || inferOutcome(actions, cards);
-  const securityResult = biometricVerified ? 'Device verified during this session.' : 'No device verification was required.';
+  const securityResult = biometricVerified
+    ? 'Device verified during this session.'
+    : biometricRequired
+      ? 'Device verification was required but not completed.'
+      : 'No device verification was required.';
   const summary = buildSummaryText(primaryIntent, actions, tools, cards);
 
   const record = validateHistorySummary({

@@ -10,5 +10,21 @@ export async function onRequest(context) {
     url.hostname = 'localhost';
     return Response.redirect(url.toString(), 307);
   }
-  return context.next();
+  const response = await context.next();
+  const secured = new Response(response.body, response);
+  secured.headers.set('X-Content-Type-Options', 'nosniff');
+  secured.headers.set('Referrer-Policy', 'no-referrer');
+  secured.headers.set('X-Frame-Options', 'DENY');
+  secured.headers.set('Content-Security-Policy', "frame-ancestors 'none'");
+  secured.headers.set('Permissions-Policy', 'microphone=(self), camera=(), geolocation=(), payment=()');
+
+  if (context.request.method === 'GET' && !url.pathname.startsWith('/api/') && !url.pathname.includes('.')) {
+    secured.headers.set('Cache-Control', 'no-cache, must-revalidate');
+  }
+
+  if (url.protocol === 'https:') {
+    secured.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+
+  return secured;
 }

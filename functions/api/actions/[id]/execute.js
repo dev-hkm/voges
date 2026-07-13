@@ -1,7 +1,8 @@
 import { demoCustomerId, json, rateLimit } from '../../../_lib/core.js';
 import { executeAction, loadAction } from '../../../_lib/actions.js';
+import { createActionReceipt } from '../../../_lib/action-receipt.js';
 import { storeSessionCard } from '../../../_lib/session-history.js';
-import { buildResolutionCompleteSummary, buildSecurityResultSummary, buildSupportTicketSummary } from '../../../_lib/summary-ui.js';
+import { buildResolutionCompleteSummary, buildSecurityResultSummary, buildSupportTicketSummary, buildVerifiedActionReceiptSummary } from '../../../_lib/summary-ui.js';
 
 export async function onRequestPost({ env, request, params }) {
   try {
@@ -23,12 +24,17 @@ export async function onRequestPost({ env, request, params }) {
       : data.ticket
       ? buildSupportTicketSummary(data.ticket)
       : buildSecurityResultSummary({ action, result: data, auditReference: params.id });
+    const receipt = await createActionReceipt({ db: env.DB, actionId: params.id, customerId });
+    const receiptUi = buildVerifiedActionReceiptSummary(receipt);
 
     if (action.session_id) {
-      await storeSessionCard(env.DB, { sessionId: action.session_id, customerId, card: ui });
+      await Promise.all([
+        storeSessionCard(env.DB, { sessionId: action.session_id, customerId, card: ui }),
+        storeSessionCard(env.DB, { sessionId: action.session_id, customerId, card: receiptUi }),
+      ]);
     }
 
-    return json({ data, ui });
+    return json({ data, ui, receipt, receipt_ui: receiptUi });
   } catch (error) {
     return json({ error: error.message }, 400);
   }
