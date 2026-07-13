@@ -591,7 +591,10 @@ const ApprovalSheet = memo(function ApprovalSheet({ action, actionBusy, actionPr
   if (!action) return null;
 
   const preview = deriveActionPreview(action, customerContext);
-  const buttonLabel = actionBusy
+  const actionFailed = action.status === 'failed';
+  const buttonLabel = actionFailed
+    ? 'Close'
+    : actionBusy
     ? (action.requires_biometric ? 'Opening device verification…' : 'Confirming action…')
     : (action.requires_biometric ? (hasPasskey === false ? 'Set up & verify' : 'Verify') : 'Confirm');
 
@@ -647,11 +650,19 @@ const ApprovalSheet = memo(function ApprovalSheet({ action, actionBusy, actionPr
             </div>
           </div>
         ) : null}
+        {actionFailed ? (
+          <div className="approval-processing is-error" role="alert">
+            <div>
+              <strong>Device verification completed, but this action was not applied.</strong>
+              <span>{action.failure_message || 'The banking context changed after approval. Generate a new plan before trying again.'}</span>
+            </div>
+          </div>
+        ) : null}
         <div className="sheet-actions">
-          <button className="secondary-action" onClick={onCancel} disabled={actionBusy} type="button">
+          {!actionFailed ? <button className="secondary-action" onClick={onCancel} disabled={actionBusy} type="button">
             Cancel
-          </button>
-          <button className="primary-action" onClick={onConfirm} disabled={actionBusy} type="button">
+          </button> : null}
+          <button className="primary-action" onClick={actionFailed ? onCancel : onConfirm} disabled={actionBusy} type="button">
             {buttonLabel}
           </button>
         </div>
@@ -2334,6 +2345,8 @@ function App() {
   const resolvePendingAction = useCallback(async () => {
     if (!pendingAction) return;
 
+    let verifiedAction = null;
+    let attemptedAction = pendingAction;
     try {
       setActionBusy(true);
       setActionProgress('Confirming your approval…');
@@ -2343,6 +2356,7 @@ function App() {
         ? { data: pendingAction }
         : await api(`/api/actions/${pendingAction.id}/confirm`, { method: 'POST' });
       const action = { ...confirmed.data, payload: pendingAction.payload || {}, policy: pendingAction.policy || null };
+      attemptedAction = action;
       setPendingAction(action);
       safeVibrate(8);
 
@@ -2376,6 +2390,8 @@ function App() {
         method: 'POST',
         body: JSON.stringify({ pending_action_id: action.id, response }),
       });
+      verifiedAction = { ...action, status: 'verified', biometric_verified_at: new Date().toISOString() };
+      setPendingAction(verifiedAction);
       safeVibrate([8, 30, 14]);
       pushTimeline('Identity verified');
       setActionProgress('Applying verified change…');
@@ -2385,6 +2401,22 @@ function App() {
       const message = actionError.name === 'NotAllowedError'
         ? 'Device verification was cancelled. No action was executed.'
         : actionError.message;
+      // WebAuthn verification and action execution are distinct stages. If a
+      // verified action later fails, retain the durable backend status instead
+      // of returning the customer to a misleading Verify button.
+      const actionId = verifiedAction?.id || attemptedAction?.id;
+      if (actionId && actionError.name !== 'NotAllowedError') {
+        try {
+          const latest = await api(`/api/actions/${actionId}`);
+          if (['failed', 'blocked', 'expired', 'completed', 'cancelled'].includes(latest.data?.status)) {
+            setPendingAction({ ...latest.data, failure_message: normalizeErrorMessage(message) });
+          }
+        } catch {
+          if (verifiedAction) {
+            setPendingAction({ ...verifiedAction, status: 'failed', failure_message: normalizeErrorMessage(message) });
+          }
+        }
+      }
       setError(normalizeErrorMessage(message));
     } finally {
       setActionBusy(false);
@@ -2395,6 +2427,10 @@ function App() {
   const cancelPendingAction = useCallback(async () => {
     try {
       if (!pendingAction) return;
+      if (['failed', 'blocked', 'expired', 'completed', 'cancelled'].includes(pendingAction.status)) {
+        setPendingAction(null);
+        return;
+      }
       await api(`/api/actions/${pendingAction.id}/cancel`, { method: 'POST' });
       setPendingAction(null);
       pushTimeline('Action cancelled');

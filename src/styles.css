@@ -2178,6 +2178,11 @@ input:focus-visible {
 .approval-processing strong { color: var(--ink); font-size: 13px; }
 .approval-processing span { margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.4; }
 
+.approval-processing.is-error {
+  border-color: color-mix(in srgb, var(--danger) 44%, var(--line));
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface-2));
+}
+
 @keyframes approval-spin { to { transform: rotate(360deg); } }
 
 .text-composer {

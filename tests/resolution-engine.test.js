@@ -41,3 +41,14 @@ test('Resolution Autopilot computes a bounded daily-limit update from verified t
   assert.equal(limitStep.payload.daily_limit, 300000);
   assert.equal(limitStep.risk_level, 'high');
 });
+
+test('Resolution Autopilot orders unlock before enabling online payments', () => {
+  const plan = compileResolutionPlan({
+    ...base,
+    decline: { found: true, plain_reason: 'Online payments are disabled.', transaction: { id: 'tx_4', merchant_name: 'Example merchant', amount: 549, currency: 'PHP', decline_reason: 'online_payment_disabled' } },
+    card: { id: 'card_1', masked_number: '**** 4821', status: 'locked', online_payment_enabled: false, international_payment_enabled: true, daily_limit: 2000, monthly_limit: 5000 },
+  });
+  const executableSteps = plan.steps.filter((step) => !step.read_only);
+  assert.deepEqual(executableSteps.map((step) => step.tool_name), ['unfreezeCard', 'enableOnlinePayments']);
+  assert.equal(plan.readiness_check.status, 'ready_after_plan');
+});
