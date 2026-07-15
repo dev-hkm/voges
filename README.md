@@ -1,5 +1,25 @@
 # Voges
 
+> **Voges** is a voice-first financial concierge built for AABW / GoTyme P3.
+>
+> **Voice is the primary interface. The screen is the safety layer.**
+
+Live demo: [voges.pages.dev](https://voges.pages.dev)
+
+## Built with Codex
+
+Voges was designed and implemented collaboratively with **OpenAI Codex** (the coding agent used for this project). Codex inspected the workspace and `sample_data`, shaped the Cloudflare-native architecture, implemented the banking tool and policy layers, wired realtime voice, added WebAuthn step-up verification, debugged production failures, and verified the deployed Pages endpoints.
+
+The implementation was developed against real demo behavior: microphone permissions, WebRTC negotiation, Realtime GA API changes, D1-backed tool responses, approval flows, and audit records were tested and corrected before deployment. Frontend work from the wider collaboration loop is preserved in the latest `main` history.
+
+## Product
+
+Voges combines a live voice agent with a visible safety layer:
+
+`Voice conversation -> intent understanding -> banking tools -> policy -> approval -> WebAuthn -> execution -> audit -> spoken result`
+
+Read-only questions can be answered immediately. Medium- and high-risk changes never execute directly from model output. They become an expiring pending action, require visible approval, and high-risk actions require a platform authenticator such as Windows Hello, Face ID, Touch ID, or a device passkey.
+
 ## V3 security architecture
 
 Voges keeps its browser-to-OpenAI Realtime voice connection intact. Banking reads remain tool calls; every write starts as a proposal and moves through a deterministic Cloudflare Pages policy check, an expiring pending action, visible user approval, WebAuthn, server-side execution, and an append-only audit log.
@@ -63,4 +83,24 @@ V2 uses the D1 database bound as `DB`. It imports the existing source-of-truth f
 - `npm run d1:seed:local` initializes the local D1 database.
 - `npm run d1:seed:remote` imports the same schema and seed into the remote `voges-banking` database.
 
-The Pages Function tool layer lives in `functions/_lib/banking.js`. Its read tools query D1; `createSupportTicket` deliberately returns `Action Proposed` and never writes data. Policy, approval, biometric, pending-action, and audit behavior are intentionally deferred to V3.
+The Pages Function tool layer lives in `functions/_lib/banking.js`. Its read tools query D1; `createSupportTicket` deliberately returns `Action Proposed` and never writes data. V3 adds the deterministic policy, approval, WebAuthn, pending-action, and audit layers around sensitive actions.
+
+## How GPT Realtime is used
+
+Voges uses the OpenAI Realtime API with WebRTC as its live voice transport:
+
+1. The browser requests microphone access with `getUserMedia()`.
+2. A Cloudflare Pages Function mints a short-lived Realtime client secret using the server-side `OPENAI_API_KEY`.
+3. The browser creates a peer connection and sends microphone audio over WebRTC to the Realtime session.
+4. GPT Realtime returns assistant audio for natural turn-taking and conversation.
+5. Realtime transcript events are forwarded to the backend planner for banking intent and tool orchestration.
+6. Banking tools remain server-side on Cloudflare Pages Functions; the voice model cannot call D1 directly.
+7. Approved results are sent back through the Realtime data channel so Voges can speak the result naturally.
+
+The configured model is `gpt-realtime-2.1`. The server endpoint is `/api/realtime/token`; the frontend never receives the permanent API key. Realtime diagnostics distinguish microphone, token, WebRTC, and provider failures during a demo.
+
+## How safety works
+
+Every request is evaluated by deterministic backend policy code. Low-risk reads are audited and returned. Medium-risk settings require an approval sheet. High-risk settings additionally require a real WebAuthn assertion created by the device authenticator. The backend verifies the signed assertion, checks the pending action and execution token, executes the permitted tool, and writes an append-only audit record.
+
+The biometric step does not transmit fingerprint or face data to Voges. The browser and operating system perform local user verification and return only a cryptographic assertion.
