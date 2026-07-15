@@ -1,5 +1,31 @@
 # Voges
 
+Voges now has two public surfaces:
+
+- `/` is the product landing page with an accurate capability overview.
+- `/app` is the working voice-first financial concierge.
+
+## Public voice preview protection
+
+Owner-funded Realtime access is limited to one 90-second preview per public IP address. The Pages Function stores only a salted SHA-256 identity hash in Cloudflare D1; it never stores the raw IP in the access-gate table. The first successful ephemeral-token issuance permanently consumes that network's preview, while the landing page and banking showcase remain accessible.
+
+This anonymous network gate also applies across devices on the same public network. It cannot reliably identify the same person after they move to another IP address or VPN; account authentication would be required for that stronger guarantee.
+
+Apply the migration before deployment:
+
+```powershell
+npm.cmd run d1:gate:local
+npm.cmd run d1:gate:remote
+```
+
+For an intentional demo reset of every preview record:
+
+```sql
+DELETE FROM realtime_access_limits;
+```
+
+Set `REALTIME_GATE_SECRET` as a long random Cloudflare Pages secret. If omitted, the gate uses `EXECUTION_TOKEN_SECRET` as its server-only salt.
+
 Voges is a voice-first AI financial concierge prototype. It combines natural realtime conversation with deterministic banking tools, backend policy, visible approval, real WebAuthn passkeys, D1 state changes, and an auditable security trail.
 
 The core product principle is:

@@ -1079,6 +1079,8 @@ function App() {
   const [online, setOnline] = useState(() => navigator.onLine);
   const [voiceMode, setVoiceMode] = useState('idle');
   const [sessionSeconds, setSessionSeconds] = useState(0);
+  const [sessionLimitSeconds, setSessionLimitSeconds] = useState(90);
+  const [voiceAccess, setVoiceAccess] = useState({ loading: true, available: true, limit_seconds: 90, reason: '' });
   const [micLevel, setMicLevel] = useState(0.08);
   const [speakerLevel, setSpeakerLevel] = useState(0.08);
   const [liveUserTurn, setLiveUserTurn] = useState(null);
@@ -1262,6 +1264,27 @@ function App() {
       setSecurityData(payload.data);
     } catch (loadError) {
       setError(normalizeErrorMessage(loadError.message));
+    }
+  }, [api]);
+
+  const loadVoiceAccess = useCallback(async () => {
+    try {
+      const payload = await api('/api/realtime/access', { timeoutMs: 10_000 });
+      const limitSeconds = Number(payload.limit_seconds) || 90;
+      setVoiceAccess({
+        loading: false,
+        available: payload.available !== false,
+        limit_seconds: limitSeconds,
+        reason: payload.reason || '',
+      });
+      setSessionLimitSeconds(limitSeconds);
+    } catch {
+      setVoiceAccess({
+        loading: false,
+        available: false,
+        limit_seconds: 90,
+        reason: 'Voice preview access is temporarily unavailable.',
+      });
     }
   }, [api]);
 
@@ -1556,8 +1579,8 @@ function App() {
   useEffect(() => () => stopSession({ silent: true }), [stopSession]);
 
   useEffect(() => {
-    Promise.allSettled([loadCustomerContext(), loadPendingAction(), loadSecurity()]);
-  }, [loadCustomerContext, loadPendingAction, loadSecurity]);
+    Promise.allSettled([loadCustomerContext(), loadPendingAction(), loadSecurity(), loadVoiceAccess()]);
+  }, [loadCustomerContext, loadPendingAction, loadSecurity, loadVoiceAccess]);
 
   useEffect(() => {
     const syncOnlineState = () => setOnline(navigator.onLine);
@@ -2046,6 +2069,11 @@ function App() {
       setError('This browser does not support the microphone or WebRTC required for Voges.');
       return;
     }
+    if (!directApiKey.trim() && voiceAccess.available === false) {
+      setError(voiceAccess.reason || 'The 90-second voice preview has already been used on this network.');
+      setStatus('Voice preview complete');
+      return;
+    }
 
     startInProgressRef.current = true;
     setConnecting(true);
@@ -2079,6 +2107,7 @@ function App() {
         setDirectVoiceError('');
         setDirectVoiceFallbackOpen(false);
         currentSessionIdRef.current = null;
+        setSessionLimitSeconds(59 * 60);
       } else {
         try {
           const tokenResponse = await fetch('/api/realtime/token', {
@@ -2098,6 +2127,9 @@ function App() {
           throw tokenError;
         }
         currentSessionIdRef.current = token.session_id || null;
+        const limitSeconds = Number(token.access_limit_seconds) || 90;
+        setSessionLimitSeconds(limitSeconds);
+        setVoiceAccess({ loading: false, available: true, limit_seconds: limitSeconds, reason: '' });
       }
       const ephemeralKey = token.value;
       if (!ephemeralKey) throw new Error('The realtime token response was empty.');
@@ -2168,11 +2200,23 @@ function App() {
         setVoiceMode('connecting');
         sessionInitializedRef.current = false;
         clearTimeout(connectionTimeoutRef.current);
+        // The access deadline is enforced from the moment the WebRTC data
+        // channel opens, so microphone/SDP setup does not consume preview time.
+        const remainingMs = trimmedDirectApiKey ? 59 * 60 * 1000 : 90 * 1000;
         sessionTimerRef.current = setTimeout(() => {
           if (channelRef.current === channel) {
-            endSessionDueToError('This voice session reached its 60-minute limit. Start a new conversation to continue.');
+            stopSession({ silent: true });
+            if (trimmedDirectApiKey) {
+              setStatus('Direct voice session complete');
+              setError('This direct voice session reached its session limit.');
+            } else {
+              const reason = 'Your 90-second voice preview is complete. The rest of the site remains available.';
+              setVoiceAccess({ loading: false, available: false, limit_seconds: 90, reason });
+              setStatus('Voice preview complete');
+              setError(reason);
+            }
           }
-        }, 59 * 60 * 1000);
+        }, remainingMs);
         // The core session (voice, instructions, VAD) was already configured
         // server-side when the token was minted. This update only registers the
         // banking tools, so the session works even if this event is delayed.
@@ -2277,6 +2321,8 @@ function App() {
     attachSpeakerMonitoring,
     startMonitoring,
     stopSession,
+    voiceAccess.available,
+    voiceAccess.reason,
     voice,
   ]);
 
@@ -2668,7 +2714,7 @@ function App() {
                   energy={currentEnergy}
                   muted={muted}
                   onClick={connected ? handleOrbPress : startSession}
-                  disabled={connecting || !online}
+                  disabled={connecting || !online || (!connected && !voiceAccess.loading && !voiceAccess.available)}
                   isError={!!fatalError}
                   isConnected={connected}
                 />
@@ -2684,7 +2730,7 @@ function App() {
               <div className="status-line minimal-status" aria-live="polite">
                 <span className={`status-indicator ${connected ? 'is-live' : ''}`} />
                 <span>{status}</span>
-                {connected && <span className="status-time"><Clock3 size={13} /> {formatDuration(sessionSeconds)}</span>}
+                {connected && <span className="status-time"><Clock3 size={13} /> {formatDuration(Math.max(0, sessionLimitSeconds - sessionSeconds))} left</span>}
                 {connected && <span className="status-chip">Live mic</span>}
               </div>
 
@@ -2700,7 +2746,11 @@ function App() {
                   ? 'Opening secure channel'
                   : connected
                     ? 'Tap the orb to stop the voice session'
-                    : 'Tap the orb to start a secure session'}
+                    : voiceAccess.loading
+                      ? 'Checking secure voice access'
+                      : voiceAccess.available
+                        ? `Tap the orb to start your ${voiceAccess.limit_seconds}-second voice preview`
+                        : 'Voice preview used; the banking showcase remains available'}
               </div>
 
               {(successState || error) && (
@@ -2732,10 +2782,10 @@ function App() {
                   onChange={(event) => setText(event.target.value)}
                   placeholder={connected ? 'Type a message if voice misses it…' : 'Type a prompt or start with voice…'}
                   aria-label="Type a message for Voges"
-                  disabled={connecting || !online}
+                  disabled={connecting || !online || (!connected && !voiceAccess.available)}
                   maxLength={800}
                 />
-                <button type="submit" disabled={!text.trim() || connecting || !online} aria-label="Send typed message">
+                <button type="submit" disabled={!text.trim() || connecting || !online || (!connected && !voiceAccess.available)} aria-label="Send typed message">
                   <ArrowUp size={18} />
                 </button>
               </form>

@@ -16,6 +16,8 @@
     "d1:v3:remote": "wrangler d1 execute voges-banking --remote --file=migrations/0002_v3_security.sql",
     "d1:history:local": "wrangler d1 execute voges-banking --local --file=migrations/0003_v5_history.sql",
     "d1:history:remote": "wrangler d1 execute voges-banking --remote --file=migrations/0003_v5_history.sql",
+    "d1:gate:local": "wrangler d1 execute voges-banking --local --file=migrations/0004_realtime_access_gate.sql",
+    "d1:gate:remote": "wrangler d1 execute voges-banking --remote --file=migrations/0004_realtime_access_gate.sql",
     "test": "node --test tests/*.test.js",
     "typecheck": "tsc --noEmit"
   },

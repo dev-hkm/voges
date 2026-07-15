@@ -1,1 +1,6 @@
 OPENAI_API_KEY="replace-with-your-openai-api-key"
+EXECUTION_TOKEN_SECRET="replace-with-a-long-random-secret"
+REALTIME_GATE_SECRET="replace-with-a-separate-long-random-secret"
+WEBAUTHN_RP_ID="localhost"
+WEBAUTHN_RP_NAME="Voges"
+WEBAUTHN_ORIGIN="http://localhost:5173"

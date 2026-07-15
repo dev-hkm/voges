@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <radialGradient id="glow" cx="76%" cy="47%" r="48%"><stop offset="0" stop-color="#65f68f" stop-opacity=".19"/><stop offset=".52" stop-color="#65f68f" stop-opacity=".035"/><stop offset="1" stop-color="#050505" stop-opacity="0"/></radialGradient>
+    <linearGradient id="core" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f5f4ef"/><stop offset="1" stop-color="#8b8b87"/></linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#050505"/>
+  <path d="M0 105H1200M0 210H1200M0 315H1200M0 420H1200M0 525H1200M200 0V630M400 0V630M600 0V630M800 0V630M1000 0V630" stroke="#fff" stroke-opacity=".045"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <text x="76" y="88" fill="#65f68f" font-family="Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="3">VOICE-FIRST / POLICY-BOUND / AUDITABLE</text>
+  <text x="70" y="282" fill="#f5f4ef" font-family="Arial, sans-serif" font-size="136" font-weight="700" letter-spacing="-10">Voges.</text>
+  <text x="77" y="351" fill="#9a9a96" font-family="Arial, sans-serif" font-size="28">The AI financial concierge that resolves,</text>
+  <text x="77" y="390" fill="#9a9a96" font-family="Arial, sans-serif" font-size="28">verifies, and records every sensitive action.</text>
+  <text x="77" y="535" fill="#5f5f5c" font-family="monospace" font-size="15" letter-spacing="2">GPT REALTIME 2.1  ·  CLOUDFLARE D1  ·  REAL WEBAUTHN</text>
+  <circle cx="943" cy="310" r="197" fill="none" stroke="#fff" stroke-opacity=".11"/><circle cx="943" cy="310" r="144" fill="none" stroke="#fff" stroke-opacity=".17" stroke-dasharray="3 12"/><circle cx="943" cy="310" r="88" fill="#080808" stroke="#fff" stroke-opacity=".2"/>
+  <path d="M943 255c42 0 68 34 68 68 0 45-42 72-68 103-26-31-68-58-68-103 0-34 26-68 68-68Z" fill="url(#core)"/>
+  <circle cx="1070" cy="193" r="7" fill="#65f68f"/>
+</svg>
